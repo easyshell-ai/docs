@@ -1,0 +1,61 @@
+---
+title: Core Concepts
+description: Understand the key concepts and architecture behind EasyShell.
+sidebar:
+  order: 3
+---
+
+Before diving into EasyShell, it helps to understand the core concepts that define how the platform works.
+
+## Server-Agent Architecture
+
+EasyShell follows a **hub-and-spoke** model:
+
+- **Server** — The central management hub that hosts the API, web interface, and business logic. It coordinates all operations and stores configuration, scripts, and execution history.
+- **Agent** — A lightweight Go binary deployed on each managed host. Agents handle script execution, metrics collection, and provide the WebSocket tunnel for real-time log streaming.
+
+Agents register with the server via HTTP and maintain connectivity through periodic heartbeats (every 30 seconds). When a task is dispatched, the server pushes instructions to the target agent(s), which execute locally and stream results back.
+
+## Hosts and Clusters
+
+A **Host** represents a single managed server. Each host has:
+- Connection details (IP, SSH port)
+- An installed agent
+- Real-time health metrics (CPU, memory, disk, network)
+- Tag-based metadata for filtering and organization
+
+**Clusters** are logical groupings of hosts. You might organize clusters by environment (production, staging), role (web servers, database servers), or region. Clusters enable batch operations across related hosts.
+
+## Scripts and Execution
+
+**Scripts** are shell scripts (Bash, Python, etc.) stored in EasyShell's script library. They can be:
+- Created and edited directly in the web interface using the built-in code editor
+- Parameterized with variables that are resolved at execution time
+
+**Execution** is the process of running a script on one or more hosts. Each execution creates a **Task** record with:
+- Target host(s)
+- Script content and parameters
+- Real-time log output (streamed via WebSocket)
+- Exit code and execution status
+- Start/end timestamps
+
+## AI Assistant
+
+The AI Operations Assistant provides a natural language interface for common operations tasks. You can:
+- Ask questions about server status
+- Request automated inspections
+- Generate scripts from natural language descriptions
+- Get explanations of error logs
+
+The assistant is powered by Spring AI and supports configurable model backends.
+
+## Security Model
+
+EasyShell implements multiple security layers:
+
+- **Dangerous Command Interception** — Automatically detects and blocks potentially destructive commands (e.g., `rm -rf /`)
+- **Approval Workflows** — High-risk operations can require manual approval before execution
+- **Audit Logging** — All operations are logged with user, timestamp, target host, and outcome
+- **Role-Based Access** — Users are assigned roles (admin, operator, viewer) that control available actions
+
+

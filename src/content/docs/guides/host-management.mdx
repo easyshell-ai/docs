@@ -1,0 +1,72 @@
+---
+title: Host Management
+description: Learn how to register, organize, and monitor hosts in EasyShell.
+sidebar:
+  order: 1
+---
+
+Host management is the foundation of EasyShell. Before you can execute scripts or use the web terminal, you need to register your servers as managed hosts.
+
+## Adding Hosts
+
+Navigate to **Host Management** → **Add Host** in the web interface. You can add hosts in two ways:
+
+### Manual Registration
+
+Enter the host details manually:
+- **Hostname / IP** — The reachable address of the server
+- **SSH Port** — Default is 22
+- **Authentication** — Password or SSH key
+- **Tags** — Key-value pairs for organizing hosts (e.g., `env:production`, `role:web`)
+
+### Auto-Discovery via Agent
+
+If the agent is already deployed on the target host, it will automatically register with the server. The agent sends a registration request containing:
+- Hostname and IP addresses
+- Operating system and kernel version
+- CPU architecture
+- Available resources (CPU cores, memory, disk)
+
+## Host Details
+
+Each host detail page displays:
+
+- **System Information** — OS, kernel, architecture, uptime
+- **Resource Metrics** — CPU usage, memory utilization, disk I/O, network throughput (updated every 60 seconds)
+- **Agent Status** — Connection state, last heartbeat time, agent version
+- **Execution History** — Recent script executions with status and duration
+
+## Organizing with Clusters
+
+Clusters let you group related hosts for batch operations. Common cluster strategies:
+
+| Strategy | Example |
+|----------|---------|
+| By environment | `production`, `staging`, `development` |
+| By role | `web-servers`, `db-servers`, `workers` |
+| By region | `us-east`, `eu-west`, `ap-southeast` |
+
+To create a cluster:
+1. Go to **Host Management** → **Clusters**
+2. Click **Create Cluster**
+3. Give it a name and optional description
+4. Add hosts to the cluster by selection or tag filter
+
+## Bulk Operations
+
+Select multiple hosts or an entire cluster to perform bulk operations:
+- **Execute Script** — Run a script across all selected hosts
+- **Update Agent** — Push agent updates to selected hosts
+- **Tag Management** — Add or remove tags in bulk
+- **Export** — Export host information as CSV
+
+## Host Health Monitoring
+
+EasyShell displays host health using a color-coded status system:
+
+| Status | Indicator | Meaning |
+|--------|-----------|---------|
+| Healthy | Green | Agent connected, all metrics normal |
+| Warning | Yellow | Agent connected, resource threshold exceeded |
+| Critical | Red | Agent connected, critical resource exhaustion |
+| Offline | Gray | No heartbeat received for 3+ intervals |

@@ -1,0 +1,171 @@
+---
+title: FAQ
+description: Frequently asked questions about EasyShell installation, usage, and troubleshooting.
+sidebar:
+  order: 101
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## General
+
+### What is EasyShell?
+
+EasyShell is a lightweight server management and intelligent operations platform. It provides a centralized web interface for managing multiple Linux servers, executing scripts across hosts, and leveraging AI for automated operations.
+
+### Is EasyShell free?
+
+Yes. EasyShell is open-source software released under the MIT License. You can use it freely for personal and commercial purposes.
+
+### What operating systems does the agent support?
+
+The EasyShell agent is a single Go binary that runs on:
+- **Linux** — amd64, arm64 (primary target)
+- **macOS** — amd64, arm64 (for development/testing)
+
+Windows is not currently supported for the agent.
+
+### What are the minimum server requirements?
+
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| Server | 2 CPU, 4GB RAM, 20GB disk | 4 CPU, 8GB RAM, 50GB disk |
+| Agent | 1 CPU, 128MB RAM, 50MB disk | 1 CPU, 256MB RAM, 100MB disk |
+| MySQL | 8.0+ | 8.0+ |
+| Redis | 7.0+ | 7.0+ |
+
+## Installation
+
+### How do I install EasyShell?
+
+The fastest way is Docker Compose:
+
+```bash
+git clone https://github.com/easyshell-ai/easyshell.git
+cd easyshell
+docker compose up -d
+cd easyshell-server && ./gradlew bootRun
+cd easyshell-web && npm install && npm run dev
+```
+
+See the [Docker installation guide](/installation/docker) for detailed instructions.
+
+### The server fails to start with a database connection error
+
+Verify MySQL is running and accessible:
+
+```bash
+docker compose ps
+docker compose logs mysql
+```
+
+Common causes:
+- MySQL hasn't finished initializing (wait 30 seconds after `docker compose up`)
+- Port 3306 is occupied by another MySQL instance
+- `docker-compose.yml` credentials don't match `application.yml`
+
+### The web frontend shows a blank page
+
+1. Check the browser console for errors (F12 → Console)
+2. Verify the server is running on port 18080
+3. Check that CORS is configured to allow `http://localhost:5173`
+4. Clear browser cache and reload
+
+## Agent
+
+### How do I deploy the agent to a remote host?
+
+```bash
+# Copy the agent binary
+scp easyshell-agent-linux-amd64 user@remote:/usr/local/bin/easyshell-agent
+
+# SSH into the host and start the agent
+ssh user@remote
+chmod +x /usr/local/bin/easyshell-agent
+easyshell-agent --server http://YOUR_SERVER_IP:18080
+```
+
+See the [Agent deployment guide](/installation/agent) for systemd service setup.
+
+### The agent shows "connection refused"
+
+- Verify the server is reachable from the agent host: `curl http://SERVER_IP:18080/api/health`
+- Check firewall rules — port 18080 must be open
+- Ensure the server URL in the agent config is correct (use IP, not `localhost`)
+
+### How often does the agent report metrics?
+
+By default:
+- **Heartbeat**: every 30 seconds
+- **Metrics**: every 60 seconds
+
+These intervals are configurable in the server settings. See [Server Configuration](/configuration/server-config).
+
+## Script Execution
+
+### Can I execute scripts on multiple hosts simultaneously?
+
+Yes. Select multiple hosts or an entire cluster, then execute a script. EasyShell supports three execution strategies:
+- **Parallel** — All hosts at once
+- **Sequential** — One at a time, stops on failure
+- **Rolling** — Batch execution with configurable batch size
+
+### What happens if a script times out?
+
+The agent kills the script process after the configured timeout (default: 5 minutes). The execution is marked as `TIMEOUT` in the history. You can adjust the timeout per-script or globally in the [server configuration](/configuration/server-config).
+
+### Can I use script parameters?
+
+Yes. Define parameters in your script using environment variables, then pass values when executing:
+
+```bash
+#!/bin/bash
+echo "Checking disk usage threshold: ${THRESHOLD:-80}%"
+df -h | awk -v threshold="$THRESHOLD" '{if(NR>1 && $5+0 > threshold) print $0}'
+```
+
+## AI Features
+
+### Do I need an OpenAI API key?
+
+AI features are optional. EasyShell works fully without AI. If you want to use the AI assistant, scheduled inspections, or SOP automation, you need an API key from any OpenAI-compatible provider.
+
+See [AI Configuration](/configuration/ai-config) for supported providers.
+
+### Can I use a local LLM instead of OpenAI?
+
+Yes. EasyShell supports any OpenAI-compatible API. You can use:
+- **Ollama** — Local LLM with `base-url: http://localhost:11434/v1`
+- **vLLM** — High-performance inference server
+- **LocalAI** — Drop-in OpenAI replacement
+
+### Is my data sent to external AI services?
+
+Only when you actively use AI features (chat, inspections). The data sent includes:
+- Your chat messages
+- Host system information (for inspections)
+- Script content (when asking AI to analyze scripts)
+
+No data is sent if AI features are disabled.
+
+## Security
+
+### Is it safe to expose EasyShell to the internet?
+
+We recommend placing EasyShell behind a reverse proxy (Nginx/Caddy) with:
+- HTTPS enabled
+- Strong authentication
+- Rate limiting
+- IP allowlisting if possible
+
+See the [Security configuration guide](/configuration/security) for a complete checklist.
+
+### How are agent credentials stored?
+
+Agent tokens are stored in the server database (MySQL). On the agent side, the token is stored in a local configuration file. We recommend:
+- Setting file permissions to `600` on the agent config
+- Using TLS for all agent-server communication
+
+<Aside type="tip">
+  Still have questions? Open an issue on [GitHub](https://github.com/easyshell-ai/easyshell/issues) or start a discussion in the repository.
+</Aside>

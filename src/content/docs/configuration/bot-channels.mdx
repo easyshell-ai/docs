@@ -1,0 +1,229 @@
+---
+title: Bot Channels
+description: Configure Telegram, Discord, and DingTalk bot channels for AI assistant interaction.
+sidebar:
+  order: 4
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+EasyShell supports multiple messaging channels that connect to the AI assistant, allowing your team to interact with EasyShell through Telegram, Discord, or DingTalk.
+
+## Telegram Bot
+
+### 1. Create a Telegram Bot
+
+1. Search for **@BotFather** in Telegram
+2. Send the `/newbot` command
+3. Follow the prompts to set the bot name and username
+4. Upon creation, BotFather returns a **Bot Token** (format: `123456789:ABCdefGHI-jklMNO...`)
+5. Save this token securely
+
+### 2. Get Chat ID
+
+<Tabs>
+<TabItem label="Via API">
+
+1. Send a message to the bot (or add the bot to a group and send a message)
+2. Open in browser: `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
+3. Find `"chat":{"id": 123456}` in the returned JSON — that's your Chat ID
+
+</TabItem>
+<TabItem label="Via Helper Bot">
+
+Search for **@userinfobot** in Telegram and send any message to get your Chat ID.
+
+</TabItem>
+</Tabs>
+
+### 3. Configure in EasyShell
+
+1. Navigate to **System Management → AI Settings → Message Channels → Telegram**
+2. Fill in the configuration:
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| Bot Token | Token obtained from BotFather | Yes |
+| Allowed Chat IDs | Comma-separated list of allowed Chat IDs | No (empty = accept all messages) |
+
+3. Toggle **Enable** on
+4. The system automatically starts long polling — the bot will receive and reply to messages
+
+<Aside type="tip">
+Telegram uses **Long Polling** mode — no public IP or HTTPS certificate required. Poll timeout is 30 seconds. Single reply message limit is 4096 characters.
+</Aside>
+
+---
+
+## Discord Bot
+
+### 1. Create a Discord Bot
+
+1. Visit the [Discord Developer Portal](https://discord.com/developers/applications)
+2. Click **New Application**, enter a name and create
+3. Go to **Bot** in the left menu
+4. Click **Add Bot** to create the bot
+5. Click **Reset Token** to get the Bot Token — save it securely
+6. Under **Privileged Gateway Intents**, enable **MESSAGE CONTENT INTENT** (required to read message content)
+
+### 2. Invite the Bot to Your Server
+
+1. Go to **OAuth2 → URL Generator** in the left menu
+2. Under **Scopes**, check `bot`
+3. Under **Bot Permissions**, check:
+   - `Send Messages`
+   - `Read Message History`
+   - `View Channels`
+4. Copy the generated invite link and open it in your browser
+5. Select the target server and confirm authorization
+
+### 3. Get Guild ID and Channel ID
+
+1. Enable **Developer Mode** in Discord:
+   - User Settings → Advanced → Enable "Developer Mode"
+2. **Guild ID** (Server ID): Right-click the server name → Copy Server ID
+3. **Channel ID**: Right-click the target text channel → Copy Channel ID
+
+### 4. Configure in EasyShell
+
+1. Navigate to **System Management → AI Settings → Message Channels → Discord**
+2. Fill in the configuration:
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| Bot Token | Discord Bot Token | Yes |
+| Guild ID | Server ID | Yes |
+| Allowed Channel IDs | Comma-separated list of allowed channel IDs | No (empty = listen to all channels) |
+
+3. Toggle **Enable** on
+
+<Aside type="tip">
+Discord uses **REST polling** mode (every 2 seconds) — no public IP required. Single reply limit is 2000 characters. The bot automatically filters its own messages to prevent loops.
+</Aside>
+
+---
+
+## DingTalk Bot
+
+### 1. Create a DingTalk Custom Bot
+
+1. Open DingTalk desktop client, enter the target group chat
+2. Click Group Settings → **Smart Group Assistant** → **Add Bot**
+3. Select **Custom (via Webhook)**
+4. Set the bot name and avatar
+5. For security, select **Sign** and record the **Secret** (starts with `SEC`)
+6. Click Finish and copy the generated **Webhook URL**
+
+### 2. Configure Callback URL (Receiving User Messages)
+
+<Aside type="caution">
+Custom group bots only support **pushing** messages to groups via Webhook URL — they cannot receive user messages. To receive and auto-reply to user messages, create an enterprise internal application bot on the [DingTalk Open Platform](https://open-dev.dingtalk.com) and configure a message receiving URL.
+</Aside>
+
+**Enterprise internal application bot setup:**
+
+1. Log in to the [DingTalk Open Platform](https://open-dev.dingtalk.com)
+2. Create an enterprise internal app → Add bot capability
+3. Set the message receiving URL to:
+   ```
+   https://<your-server-domain>:<port>/api/v1/webhook/dingtalk
+   ```
+4. Requirements:
+   - Must use **HTTPS**
+   - Must be publicly accessible
+   - For internal servers, use tools like ngrok or frp for tunneling
+
+### 3. Configure in EasyShell
+
+1. Navigate to **System Management → AI Settings → Message Channels → DingTalk**
+2. Fill in the configuration:
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| Webhook URL | DingTalk Webhook URL | Yes |
+| Secret | Signing key (starts with `SEC`) | Recommended |
+
+3. Toggle **Enable** on
+
+<Aside type="tip">
+DingTalk uses **Webhook callback** mode — your server needs a publicly accessible HTTPS address. Signature verification uses HmacSHA256. If you only need to push messages to DingTalk groups (no receiving), just configure the Webhook URL.
+</Aside>
+
+---
+
+
+## Conversation Context Settings
+
+Bot channels support persistent conversation context, so the AI remembers previous messages within a session. These settings are configured globally for all channels.
+
+Navigate to **System Management → AI Settings → Message Channels**, and find the **Channel Context Settings** panel.
+
+### Configuration Options
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| Context Mode | **Persistent** — AI remembers conversation history within a session. **Stateless** — each message is treated independently with no history. | Persistent |
+| Session Timeout | How long (in minutes) before an idle session expires and context is cleared. Set to 0 for no timeout. | 30 minutes |
+| Default Provider | AI provider used for bot channel conversations (e.g., OpenAI, Anthropic). If not set, the system's default AI provider is used. | System default |
+| Default Model | AI model used for bot channel conversations. If not set, the provider's default model is used. | Provider default |
+
+<Aside type="tip">
+Each channel can also override the default provider and model individually. Per-channel settings take precedence over the global defaults configured here.
+</Aside>
+
+### Per-Channel Provider & Model
+
+In each channel's configuration section (Telegram, Discord, DingTalk), you can optionally set a **Provider** and **Model** specific to that channel. This allows different channels to use different AI models. If left empty, the global channel defaults above are used.
+
+### Resetting Conversation Context
+
+Users can send the `/new` command in any bot channel to **reset their conversation context** and start a fresh session. This clears all previous message history for that user/chat.
+
+<Aside type="note">
+Session context is stored in server memory. If the server restarts, all active sessions are cleared and conversations start fresh.
+</Aside>
+
+---
+
+## Troubleshooting
+
+### Bot not responding after configuration?
+
+1. Confirm the channel's **Enable** toggle is on
+2. Check EasyShell server logs — search for `Started channel` or `Failed to start channel`
+3. Verify the Bot Token or Webhook URL is correct
+4. Confirm an AI model provider is configured (e.g., OpenAI, DeepSeek)
+
+### How to restart Telegram / Discord bot?
+
+In **AI Settings**, turn off the channel's Enable toggle, wait a few seconds, then turn it back on. The system will automatically stop the old connection and establish a new one.
+
+### DingTalk bot not receiving messages?
+
+1. Confirm you're using an enterprise internal application bot (not a custom group bot) with a message receiving URL configured
+2. Verify the callback URL `https://<domain>/api/v1/webhook/dingtalk` is publicly accessible
+3. Check that the signing Secret matches the DingTalk Open Platform configuration
+4. Check server logs for signature verification failures
+
+### How to check bot status?
+
+Check the EasyShell server startup logs:
+
+```
+Started channel: telegram          — Telegram bot started
+Started channel: discord           — Discord bot started
+DingTalk bot started (webhook mode) — DingTalk bot started
+Failed to start channel: xxx       — Startup failed, check error details
+```
+
+### Bot doesn't remember conversation history?
+
+1. Check that **Context Mode** is set to **Persistent** (not Stateless) in Channel Context Settings
+2. Verify the **Session Timeout** hasn't expired — if the user was idle longer than the configured timeout, the session was cleared
+3. Check server logs for `Session expired for` messages indicating timeout-based cleanup
+4. Remember that server restarts clear all session context
+
+### How to use different AI models for different channels?
+
+Set the **Provider** and **Model** fields in each channel's individual configuration section. For example, you can use GPT-4o for Telegram and Claude for Discord. If a channel's provider/model is not set, it falls back to the global channel defaults, then to the system AI settings.

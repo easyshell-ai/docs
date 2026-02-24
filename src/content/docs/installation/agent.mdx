@@ -1,0 +1,110 @@
+---
+title: Agent Deployment
+description: Deploy and configure the EasyShell agent on target hosts.
+sidebar:
+  order: 4
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+The EasyShell Agent is a lightweight Go binary that runs on each managed host. It handles script execution, metrics collection, and real-time log streaming.
+
+## Features
+
+- **Single binary** — No runtime dependencies, simple deployment
+- **Cross-platform** — Linux (amd64, arm64), macOS
+- **Low overhead** — Typically under 20 MB memory usage
+- **Auto-registration** — Agents automatically register with the server on first start
+- **Self-healing** — Automatic reconnection on network interruptions
+
+## Installation
+
+### Pre-built Binaries
+
+Download the latest agent binary for your platform:
+
+<Tabs>
+  <TabItem label="Linux amd64">
+    ```bash
+    curl -fsSL https://github.com/easyshell-ai/easyshell/releases/latest/download/easyshell-agent-linux-amd64 -o /usr/local/bin/easyshell-agent
+    chmod +x /usr/local/bin/easyshell-agent
+    ```
+  </TabItem>
+  <TabItem label="Linux arm64">
+    ```bash
+    curl -fsSL https://github.com/easyshell-ai/easyshell/releases/latest/download/easyshell-agent-linux-arm64 -o /usr/local/bin/easyshell-agent
+    chmod +x /usr/local/bin/easyshell-agent
+    ```
+  </TabItem>
+</Tabs>
+
+### Build from Source
+
+```bash
+cd easyshell-agent
+GOOS=linux GOARCH=amd64 go build -o easyshell-agent-linux-amd64 ./cmd/agent
+```
+
+## Configuration
+
+The agent is configured via environment variables or a configuration file:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EASYSHELL_SERVER_URL` | `http://localhost:18080` | Server API endpoint |
+| `EASYSHELL_AGENT_NAME` | hostname | Display name for the agent |
+| `EASYSHELL_HEARTBEAT_INTERVAL` | `30s` | Heartbeat frequency |
+| `EASYSHELL_METRICS_INTERVAL` | `60s` | Metrics reporting frequency |
+
+## Running as a Service
+
+Create a systemd service for the agent:
+
+```ini
+[Unit]
+Description=EasyShell Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/easyshell-agent
+Restart=always
+RestartSec=5
+Environment=EASYSHELL_SERVER_URL=https://easyshell.example.com
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable easyshell-agent
+sudo systemctl start easyshell-agent
+```
+
+## Communication Protocol
+
+The agent communicates with the server using two protocols:
+
+- **HTTP** — Registration, heartbeat (30s interval), metrics reporting (60s interval), configuration polling
+- **WebSocket** — On-demand connections for real-time log streaming during script execution and interactive terminal sessions
+
+<Aside type="tip">
+  If your hosts are behind a firewall, ensure outbound HTTP/HTTPS and WebSocket connections to the server are allowed. The agent always initiates connections — no inbound ports need to be opened.
+</Aside>
+
+## Verifying Agent Status
+
+After starting the agent, verify it appears in the EasyShell web interface:
+
+1. Navigate to **Host Management**
+2. The new agent should appear with a green status indicator
+3. Click the host to view real-time metrics
+
+If the agent does not appear, check the agent logs:
+
+```bash
+journalctl -u easyshell-agent -f
+```

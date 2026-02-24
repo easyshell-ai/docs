@@ -1,0 +1,32 @@
+---
+title: Welcome to EasyShell
+description: Lightweight server management and intelligent operations platform documentation.
+template: splash
+hero:
+  tagline: Server-Agent Architecture · Batch Script Execution · Real-time Logs · AI-Powered Ops
+  actions:
+    - text: Get Started
+      link: /getting-started/quick-start/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/easyshell-ai/easyshell
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid stagger>
+  <Card title="Batch Execution" icon="rocket">
+    Execute shell scripts across hundreds of hosts simultaneously with real-time log streaming and progress tracking.
+  </Card>
+  <Card title="AI Operations" icon="star">
+    Natural language driven intelligent operations — describe what you need, and the AI assistant handles the rest.
+  </Card>
+  <Card title="Web Terminal" icon="laptop">
+    Browser-based interactive terminal with full SSH capabilities. No client installation required.
+  </Card>
+  <Card title="Cloud Scripts" icon="open-book">
+    Community-shared operations script library with version control, security scanning, and one-click deployment.
+  </Card>
+</CardGrid>

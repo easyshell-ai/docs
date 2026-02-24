@@ -1,0 +1,124 @@
+---
+title: Production Deployment
+description: Best practices for deploying EasyShell in production environments.
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+This guide covers production deployment considerations including Nginx reverse proxy, TLS, systemd services, and monitoring.
+
+## Architecture
+
+A typical production deployment consists of:
+
+```
+Internet → Nginx (TLS) → EasyShell Server (:18080)
+                        → EasyShell Web (static files)
+           MySQL 8.0 ← EasyShell Server
+           Redis 7   ← EasyShell Server
+```
+
+## Nginx Reverse Proxy
+
+Configure Nginx to serve the web frontend and proxy API requests to the server:
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name easyshell.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/easyshell.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/easyshell.example.com/privkey.pem;
+
+    location / {
+        root /opt/easyshell/web/dist;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:18080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /ws/ {
+        proxy_pass http://127.0.0.1:18080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 86400;
+    }
+}
+```
+
+<Aside type="caution">
+  The WebSocket location block (`/ws/`) requires `proxy_http_version 1.1` and the Upgrade headers. Without these, real-time log streaming and web terminal will not work.
+</Aside>
+
+## Systemd Service
+
+Create a systemd service file for the EasyShell server:
+
+```ini
+[Unit]
+Description=EasyShell Server
+After=network.target mysql.service redis.service
+
+[Service]
+Type=simple
+User=easyshell
+WorkingDirectory=/opt/easyshell
+ExecStart=/usr/bin/java -jar easyshell-server.jar --server.port=18080
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment=SPRING_PROFILES_ACTIVE=production
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable easyshell
+sudo systemctl start easyshell
+```
+
+## Database Backup
+
+Set up automated daily backups using cron:
+
+```bash
+0 2 * * * mysqldump -u easyshell -p'password' easyshell | gzip > /backup/easyshell-$(date +\%Y\%m\%d).sql.gz
+```
+
+Retain at least 7 days of backups and test restoration periodically.
+
+## Security Hardening
+
+- Run the server as a non-root user
+- Enable MySQL SSL connections
+- Set Redis `requirepass` in production
+- Configure firewall rules to restrict access to database and Redis ports
+- Enable audit logging for compliance
+- Rotate application logs to prevent disk exhaustion
+
+## Monitoring
+
+Monitor the following endpoints:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/actuator/health` | Application health check |
+| `/actuator/metrics` | Prometheus-compatible metrics |
+| `/actuator/info` | Application version info |
+
+Configure your monitoring system (Prometheus, Grafana, etc.) to scrape the metrics endpoint and alert on service degradation.

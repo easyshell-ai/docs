@@ -1,0 +1,295 @@
+---
+title: Server API
+description: RESTful API reference for the EasyShell central management server.
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+The EasyShell server exposes a RESTful API on port `18080`. All endpoints require authentication unless otherwise noted.
+
+## Authentication
+
+All API requests must include a valid session token obtained via the login endpoint.
+
+```bash
+# Login and obtain token
+curl -X POST http://localhost:18080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "admin123"}'
+```
+
+Response:
+
+```json
+{
+  "code": 200,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiJ9...",
+    "user": {
+      "id": 1,
+      "username": "admin",
+      "role": "ADMIN"
+    }
+  }
+}
+```
+
+Include the token in subsequent requests:
+
+```bash
+curl -H "Authorization: Bearer <token>" http://localhost:18080/api/hosts
+```
+
+## Host Management
+
+### List Hosts
+
+```http
+GET /api/hosts
+```
+
+Query parameters:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | number | 0 | Page number (zero-based) |
+| `size` | number | 20 | Page size |
+| `search` | string | — | Filter by hostname or IP |
+| `status` | string | — | Filter by status: `ONLINE`, `OFFLINE`, `WARNING` |
+| `clusterId` | number | — | Filter by cluster ID |
+
+### Get Host Details
+
+```http
+GET /api/hosts/{id}
+```
+
+Returns host information including system info, agent status, resource metrics, and tags.
+
+### Register Host
+
+```http
+POST /api/hosts
+```
+
+```json
+{
+  "hostname": "web-server-01",
+  "ip": "192.168.1.100",
+  "sshPort": 22,
+  "authType": "PASSWORD",
+  "username": "root",
+  "password": "...",
+  "tags": { "env": "production", "role": "web" }
+}
+```
+
+### Delete Host
+
+```http
+DELETE /api/hosts/{id}
+```
+
+<Aside type="caution">
+  Deleting a host removes all associated execution history and metrics. This action cannot be undone.
+</Aside>
+
+## Script Management
+
+### List Scripts
+
+```http
+GET /api/scripts
+```
+
+Query parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `page` | number | Page number |
+| `size` | number | Page size |
+| `type` | string | Script type: `BASH`, `PYTHON`, `POWERSHELL` |
+| `category` | string | Category filter |
+
+### Create Script
+
+```http
+POST /api/scripts
+```
+
+```json
+{
+  "name": "Check Disk Usage",
+  "description": "Reports disk usage across all mounted filesystems",
+  "type": "BASH",
+  "content": "#!/bin/bash\ndf -h | grep -v tmpfs",
+  "timeout": 30,
+  "tags": ["monitoring", "disk"]
+}
+```
+
+### Execute Script
+
+```http
+POST /api/scripts/{id}/execute
+```
+
+```json
+{
+  "hostIds": [1, 2, 3],
+  "params": {
+    "threshold": "80"
+  },
+  "async": true
+}
+```
+
+Response:
+
+```json
+{
+  "code": 200,
+  "data": {
+    "taskId": "task_20260220_001",
+    "status": "RUNNING",
+    "hostCount": 3
+  }
+}
+```
+
+## Task Execution
+
+### Get Task Status
+
+```http
+GET /api/tasks/{taskId}
+```
+
+Returns the overall task status and per-host execution results.
+
+### Get Task Logs
+
+```http
+GET /api/tasks/{taskId}/logs
+```
+
+Query parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `hostId` | number | Filter logs by specific host |
+| `follow` | boolean | Stream logs in real-time (SSE) |
+
+<Aside type="tip">
+  For real-time log streaming, use the WebSocket endpoint `/ws/logs/{taskId}` instead. It provides lower latency and bidirectional communication.
+</Aside>
+
+## Cluster Management
+
+### List Clusters
+
+```http
+GET /api/clusters
+```
+
+### Create Cluster
+
+```http
+POST /api/clusters
+```
+
+```json
+{
+  "name": "Production Web Servers",
+  "description": "All production web server instances",
+  "hostIds": [1, 2, 5, 8]
+}
+```
+
+### Execute on Cluster
+
+```http
+POST /api/clusters/{id}/execute
+```
+
+```json
+{
+  "scriptId": 10,
+  "params": {},
+  "strategy": "PARALLEL"
+}
+```
+
+Execution strategies:
+
+| Strategy | Description |
+|----------|-------------|
+| `PARALLEL` | Execute on all hosts simultaneously |
+| `SEQUENTIAL` | Execute one host at a time, stop on failure |
+| `ROLLING` | Execute in batches with configurable batch size |
+
+## User Management
+
+### List Users
+
+```http
+GET /api/users
+```
+
+<Aside>
+  Only users with the `ADMIN` role can access user management endpoints.
+</Aside>
+
+### Create User
+
+```http
+POST /api/users
+```
+
+```json
+{
+  "username": "operator",
+  "password": "securePassword123",
+  "role": "OPERATOR",
+  "email": "operator@example.com"
+}
+```
+
+## Response Format
+
+All API responses follow a consistent format:
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": { ... }
+}
+```
+
+Error responses:
+
+```json
+{
+  "code": 400,
+  "message": "Validation failed",
+  "errors": [
+    { "field": "hostname", "message": "must not be blank" }
+  ]
+}
+```
+
+Common HTTP status codes:
+
+| Code | Meaning |
+|------|---------|
+| 200 | Success |
+| 201 | Created |
+| 400 | Bad Request — validation error |
+| 401 | Unauthorized — missing or invalid token |
+| 403 | Forbidden — insufficient permissions |
+| 404 | Not Found |
+| 500 | Internal Server Error |

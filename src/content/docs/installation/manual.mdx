@@ -1,0 +1,111 @@
+---
+title: Manual Installation
+description: Install EasyShell components manually without Docker for maximum control.
+sidebar:
+  order: 2
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+Manual installation gives you full control over each component. This approach is suitable for environments where Docker is not available or when you need fine-grained configuration.
+
+## Prerequisites
+
+| Component | Requirement |
+|-----------|-------------|
+| Java | JDK 17 or later |
+| Node.js | 20 LTS |
+| MySQL | 8.0 or later |
+| Redis | 7.0 or later |
+| Go | 1.23 (for building the agent) |
+
+## Install MySQL
+
+<Tabs>
+  <TabItem label="Ubuntu/Debian">
+    ```bash
+    sudo apt update
+    sudo apt install mysql-server-8.0
+    sudo systemctl enable mysql
+    sudo systemctl start mysql
+    sudo mysql_secure_installation
+    ```
+  </TabItem>
+  <TabItem label="CentOS/RHEL">
+    ```bash
+    sudo dnf install mysql-server
+    sudo systemctl enable mysqld
+    sudo systemctl start mysqld
+    sudo mysql_secure_installation
+    ```
+  </TabItem>
+</Tabs>
+
+Create the database and user:
+
+```sql
+CREATE DATABASE easyshell CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'easyshell'@'localhost' IDENTIFIED BY 'your_password';
+GRANT ALL PRIVILEGES ON easyshell.* TO 'easyshell'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+## Install Redis
+
+<Tabs>
+  <TabItem label="Ubuntu/Debian">
+    ```bash
+    sudo apt install redis-server
+    sudo systemctl enable redis-server
+    sudo systemctl start redis-server
+    ```
+  </TabItem>
+  <TabItem label="CentOS/RHEL">
+    ```bash
+    sudo dnf install redis
+    sudo systemctl enable redis
+    sudo systemctl start redis
+    ```
+  </TabItem>
+</Tabs>
+
+## Build and Run the Server
+
+```bash
+cd easyshell-server
+./gradlew bootJar
+```
+
+Configure the server by editing `application.yml` or passing environment variables:
+
+```bash
+export SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/easyshell
+export SPRING_DATASOURCE_USERNAME=easyshell
+export SPRING_DATASOURCE_PASSWORD=your_password
+export SPRING_REDIS_HOST=localhost
+export SPRING_REDIS_PORT=6379
+
+java -jar build/libs/easyshell-server-0.1.0-SNAPSHOT.jar --server.port=18080
+```
+
+## Build and Run the Web Frontend
+
+```bash
+cd easyshell-web
+npm install
+npm run build
+npm run preview
+```
+
+For production, serve the built files with Nginx. See the [Production Deployment](/installation/production/) guide.
+
+## Verify Installation
+
+1. Open `http://localhost:5173` (dev) or your configured URL
+2. Login with `admin` / `admin123`
+3. Check the system status page for service connectivity
+
+<Aside type="tip">
+  Run the server with `--spring.profiles.active=dev` for development mode, which enables verbose logging and Hibernate DDL auto-update.
+</Aside>

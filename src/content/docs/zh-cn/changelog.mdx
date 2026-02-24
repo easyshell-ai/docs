@@ -1,0 +1,81 @@
+---
+title: 更新日志
+description: EasyShell 的发布历史和版本说明。
+sidebar:
+  order: 100
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+EasyShell 的所有重要变更都记录在这里。本项目遵循[语义化版本控制](https://semver.org/)。
+
+## v0.2.0（即将发布）
+
+### 新增
+- **云端脚本市场** — 在 [easyshell.ai](https://easyshell.ai) 浏览、分享和下载社区脚本
+- **脚本兼容性元数据** — 脚本现在可声明支持的操作系统、内核版本和 CPU 架构
+- **脚本版本控制** — 发布和追踪脚本的多个版本
+- **GitHub OAuth 登录** — 使用 GitHub 账号登录以发布和评价脚本
+- **文档站** — 独立文档站 [docs.easyshell.ai](https://docs.easyshell.ai)
+
+### 改进
+- 增强了脚本执行的滚动部署策略
+- 改善了 Agent 连接失败的错误消息
+- 优化了 Web 终端的重连处理
+
+---
+
+## v0.1.0（首次发布）
+
+### 核心平台
+- **服务端** — Java 17 + Spring Boot 3.5.10 中心管理服务器
+- **Agent** — Go 1.23 轻量级 Agent，零运行时依赖
+- **Web UI** — React 19 + TypeScript + Vite 7 前端，使用 Ant Design 6
+
+### 基础设施管理
+- 主机注册（手动注册和通过 Agent 自动发现）
+- 主机详情视图，包含系统信息和资源指标
+- 集群分组，用于组织相关主机
+- 基于标签的主机组织
+
+### 脚本执行
+- 脚本库，支持增删改查管理
+- 跨多台主机的批量脚本执行
+- 通过 WebSocket 的实时日志流
+- 执行历史与状态追踪
+- 可配置的执行超时
+- 支持 Bash、Python 和 PowerShell 脚本
+
+### Web 终端
+- 基于浏览器的 SSH 终端，通过 WebSocket 连接
+- 多标签页终端会话
+- 终端窗口大小调整支持
+- 复制/粘贴支持
+
+### AI 智能
+- 基于 Spring AI 的 AI 对话助手
+- 支持 OpenAI、Azure OpenAI 及 OpenAI 兼容的提供商
+- 定时主机巡检与自动化报告
+- 危险命令的操作审批流程
+- SOP（标准操作流程）管理
+- 向量存储，用于 AI 记忆和上下文检索
+
+### 管理功能
+- 基于角色的访问控制（管理员、操作员、查看者）
+- 用户管理
+- 系统配置界面
+- AI 模型设置
+- 审计日志
+
+### 平台特性
+- 国际化（英文和中文）
+- 深色和浅色主题
+- 响应式设计
+- Agent 心跳监控（30 秒间隔）
+- 资源指标采集（60 秒间隔）
+
+### 通信协议
+- HTTP REST API 用于常规操作
+- WebSocket 用于实时日志流和终端
+- 基于 Token 认证的 Agent 注册
+- 指数退避的自动重连

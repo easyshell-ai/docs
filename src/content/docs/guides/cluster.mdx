@@ -1,0 +1,81 @@
+---
+title: Cluster Management
+description: Organize hosts into clusters for efficient batch operations.
+sidebar:
+  order: 4
+---
+
+Clusters provide a way to group related hosts for streamlined management and batch operations. This guide covers cluster creation, management, and common usage patterns.
+
+## Creating Clusters
+
+Navigate to **Host Management** → **Clusters** → **Create Cluster**:
+
+1. **Name** — A unique, descriptive name (e.g., `prod-web-servers`)
+2. **Description** — Optional notes about the cluster's purpose
+3. **Host Selection** — Add hosts manually or by tag filter
+
+### Tag-based Dynamic Groups
+
+Instead of manually adding hosts, you can use tag filters to create dynamic groups:
+
+```
+env:production AND role:web
+```
+
+Hosts matching the filter are automatically included. When new hosts are tagged, they join the cluster automatically.
+
+## Cluster Operations
+
+Once a cluster is defined, you can perform operations on all its hosts simultaneously:
+
+- **Batch Script Execution** — Run any script across all cluster hosts
+- **Rolling Updates** — Execute scripts with configurable concurrency and delay between hosts
+- **Health Overview** — See aggregated health metrics for the entire cluster
+- **Bulk Tag Management** — Apply or remove tags from all hosts in the cluster
+
+## Common Cluster Patterns
+
+### By Environment
+
+```
+production  → all hosts tagged env:production
+staging     → all hosts tagged env:staging
+development → all hosts tagged env:development
+```
+
+### By Service Role
+
+```
+web-servers → role:web
+db-servers  → role:database
+workers     → role:worker
+cache       → role:cache
+```
+
+### By Region
+
+```
+us-east  → region:us-east-1
+eu-west  → region:eu-west-1
+```
+
+## Cluster Dashboard
+
+Each cluster has a dashboard showing:
+
+| Metric | Description |
+|--------|-------------|
+| Total Hosts | Number of hosts in the cluster |
+| Online | Hosts with active agent connections |
+| Avg CPU | Average CPU utilization across the cluster |
+| Avg Memory | Average memory usage |
+| Recent Tasks | Last 10 batch executions |
+
+## Best Practices
+
+- Use consistent tagging conventions across your infrastructure
+- Prefer tag-based dynamic groups over static host lists for production clusters
+- Set up cluster-specific alerting thresholds
+- Document cluster purposes in the description field
+- Review cluster membership regularly to remove decommissioned hosts

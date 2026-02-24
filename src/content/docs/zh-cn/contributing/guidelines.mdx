@@ -1,0 +1,155 @@
+---
+title: 贡献指南
+description: 如何为 EasyShell 贡献代码、文档和社区参与指南。
+sidebar:
+  order: 2
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+我们欢迎对 EasyShell 的各种贡献！无论是修复 Bug、新增功能、改进文档还是翻译，每一份贡献都很重要。
+
+## 如何贡献
+
+### 1. 找到一个 Issue
+
+- 浏览 GitHub 上的 [开放 Issues](https://github.com/easyshell-ai/easyshell/issues)
+- 查找标记为 `good first issue` 的新手友好任务
+- 查看 `help wanted` 标签的 Issue，了解我们需要社区帮助的地方
+
+### 2. Fork 并创建分支
+
+```bash
+# 在 GitHub 上 Fork 仓库，然后：
+git clone https://github.com/YOUR_USERNAME/easyshell.git
+cd easyshell
+git checkout -b feature/your-feature-name
+```
+
+分支命名规范：
+
+| 前缀 | 用途 |
+|------|------|
+| `feature/` | 新功能 |
+| `fix/` | Bug 修复 |
+| `docs/` | 文档变更 |
+| `refactor/` | 代码重构 |
+| `test/` | 添加或更新测试 |
+
+### 3. 进行修改
+
+- 遵循现有代码风格（参见 [开发环境搭建](/zh-cn/contributing/development/)）
+- 为新功能编写测试
+- 如果您的更改影响用户可见行为，请更新文档
+
+### 4. 提交信息
+
+遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
+
+```
+type(scope): short description
+
+Optional longer description explaining the change.
+
+Fixes #123
+```
+
+类型：
+
+| 类型 | 说明 |
+|------|------|
+| `feat` | 新功能 |
+| `fix` | Bug 修复 |
+| `docs` | 仅文档变更 |
+| `refactor` | 既不修复 Bug 也不添加功能的代码变更 |
+| `test` | 添加或修正测试 |
+| `chore` | 构建过程、CI 或辅助工具变更 |
+| `perf` | 性能改进 |
+
+示例：
+
+```
+feat(server): add batch script execution with rolling strategy
+fix(agent): handle reconnection when server restarts
+docs: add AI configuration guide
+test(web): add unit tests for host management page
+```
+
+### 5. 提交 Pull Request
+
+1. 将分支推送到你的 Fork
+2. 针对 `main` 分支发起 Pull Request
+3. 填写 PR 模板，包含：
+   - 变更的描述和原因
+   - 截图（如有 UI 变更）
+   - 测试步骤
+   - 关联的 Issue 编号
+
+<Aside type="tip">
+  保持 PR 聚焦且精简。一个只做好一件事的 PR 比一个改动很多内容的大型 PR 更容易审查。
+</Aside>
+
+## 代码审查流程
+
+1. 维护者将在 3 个工作日内审查你的 PR
+2. 通过推送额外的提交来处理反馈意见
+3. 审核通过后，维护者会合并你的 PR
+
+## 各组件指南
+
+### Server（Java）
+
+- 使用构造函数注入（而非字段注入）Spring Bean
+- 使用 JUnit 5 和 Mockito 编写单元测试
+- 使用 QueryDSL 处理复杂数据库查询
+- 遵循 JPA 最佳实践 — 避免 N+1 查询
+
+### Agent（Go）
+
+- 保持二进制文件小巧 — 避免不必要的依赖
+- 显式处理所有错误（不要忽略错误返回值）
+- 编写表驱动测试
+- 支持优雅关闭
+
+### Web 前端（TypeScript）
+
+- 使用函数式组件和 Hooks
+- 为所有 Props 标注类型 — 不使用 `any` 类型
+- 统一使用 Ant Design 组件
+- 支持英文和中文两种语言
+
+### 文档
+
+- 使用清晰简洁的语言撰写
+- 为每个配置选项提供代码示例
+- 提交前测试所有代码示例
+- 尽可能添加中文翻译
+
+## 报告 Bug
+
+报告 Bug 时，请包含：
+
+1. **环境** — 操作系统、Java/Go/Node 版本、浏览器
+2. **复现步骤** — 触发 Bug 的最小步骤
+3. **预期行为** — 期望发生什么
+4. **实际行为** — 实际发生了什么
+5. **日志** — 相关的 Server/Agent/浏览器控制台输出
+6. **截图** — 如果 Bug 是视觉上的问题
+
+## 功能请求
+
+在 GitHub 上创建一个带有 `enhancement` 标签的 Issue，包含：
+
+- **问题** — 这解决了什么问题？
+- **方案** — 应该如何工作？
+- **替代方案** — 你考虑过哪些其他方案？
+
+## 社区
+
+- 在所有交流中保持尊重和建设性
+- 遵守 [行为准则](https://github.com/easyshell-ai/easyshell/blob/main/CODE_OF_CONDUCT.md)
+- 在 Issues 和讨论中帮助他人
+
+## 许可证
+
+通过贡献代码，你同意你的贡献将在 MIT 许可证下发布。

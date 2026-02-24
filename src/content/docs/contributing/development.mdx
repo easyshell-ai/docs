@@ -1,0 +1,208 @@
+---
+title: Development Setup
+description: Set up a local development environment for contributing to EasyShell.
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+## Prerequisites
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+| Java | 17+ | Server development |
+| Gradle | 8.x (wrapper included) | Server build system |
+| Go | 1.23+ | Agent development |
+| Node.js | 20+ | Web frontend development |
+| Docker | 24+ | Infrastructure services |
+| Git | 2.30+ | Version control |
+
+## Repository Structure
+
+```
+easyshell/
+├── easyshell-server/     # Java 17 + Spring Boot 3.5
+├── easyshell-agent/      # Go 1.23
+├── easyshell-web/        # React 19 + TypeScript + Vite 7
+├── easyshell-docs/       # Astro + Starlight (this docs site)
+├── easyshell-site/       # Next.js 15 (website + marketplace)
+├── docker-compose.yml    # MySQL + Redis
+├── prd/                  # Product requirement documents
+└── spec/                 # Technical specifications
+```
+
+## Getting Started
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/easyshell-ai/easyshell.git
+cd easyshell
+```
+
+### 2. Start Infrastructure
+
+```bash
+docker compose up -d
+```
+
+This starts MySQL 8.0 and Redis 7 with default credentials for development.
+
+### 3. Start the Server
+
+<Tabs>
+  <TabItem label="IntelliJ IDEA">
+    1. Open `easyshell-server/` as a Gradle project
+    2. Set JDK to Java 17
+    3. Run `EasyShellServerApplication.java`
+    4. Server starts on port `18080`
+  </TabItem>
+  <TabItem label="Command Line">
+    ```bash
+    cd easyshell-server
+    ./gradlew bootRun
+    ```
+  </TabItem>
+</Tabs>
+
+The server uses Hibernate auto-DDL — database tables are created automatically on first run.
+
+### 4. Start the Web Frontend
+
+```bash
+cd easyshell-web
+npm install
+npm run dev
+```
+
+The frontend starts on `http://localhost:5173` with hot module replacement enabled.
+
+### 5. Build the Agent (Optional)
+
+```bash
+cd easyshell-agent
+go build -o easyshell-agent ./cmd/agent
+```
+
+<Aside type="tip">
+  Pre-built agent binaries are available in the releases. You only need to build the agent if you're modifying agent code.
+</Aside>
+
+## Development Workflow
+
+### Server (Java)
+
+```bash
+cd easyshell-server
+
+# Run with dev profile
+./gradlew bootRun --args='--spring.profiles.active=dev'
+
+# Run tests
+./gradlew test
+
+# Build JAR
+./gradlew bootJar
+```
+
+Key directories:
+
+| Path | Contents |
+|------|----------|
+| `src/main/java/dev/easyshell/` | Application source code |
+| `src/main/resources/` | Configuration files |
+| `src/test/java/` | Test files |
+
+### Agent (Go)
+
+```bash
+cd easyshell-agent
+
+# Run locally
+go run ./cmd/agent --server http://localhost:18080
+
+# Run tests
+go test ./...
+
+# Cross-compile
+GOOS=linux GOARCH=amd64 go build -o bin/agent-linux-amd64 ./cmd/agent
+GOOS=linux GOARCH=arm64 go build -o bin/agent-linux-arm64 ./cmd/agent
+```
+
+### Web Frontend (React)
+
+```bash
+cd easyshell-web
+
+# Development server with HMR
+npm run dev
+
+# Type checking
+npx tsc --noEmit
+
+# Lint
+npm run lint
+
+# Build for production
+npm run build
+```
+
+### Documentation Site
+
+```bash
+cd easyshell-docs
+
+# Development server
+pnpm dev
+
+# Build
+pnpm build
+
+# Preview production build
+pnpm preview
+```
+
+## Code Style
+
+| Component | Style Guide | Tool |
+|-----------|------------|------|
+| Server (Java) | Google Java Style | Checkstyle |
+| Agent (Go) | Standard Go formatting | `gofmt` / `goimports` |
+| Web (TypeScript) | ESLint + Prettier | `.eslintrc` / `.prettierrc` |
+
+## Database
+
+### Development Credentials
+
+| Field | Value |
+|-------|-------|
+| Host | localhost |
+| Port | 3306 |
+| Database | easyshell |
+| Username | root |
+| Password | root |
+
+### Reset Database
+
+```bash
+# Stop and remove MySQL volume
+docker compose down -v
+docker compose up -d
+```
+
+The server recreates all tables on startup (with `ddl-auto: update`).
+
+## Useful Commands
+
+```bash
+# Check all services are running
+docker compose ps
+
+# View server logs
+docker compose logs -f mysql redis
+
+# Connect to MySQL
+docker compose exec mysql mysql -uroot -proot easyshell
+```

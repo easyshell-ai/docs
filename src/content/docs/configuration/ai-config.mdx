@@ -1,0 +1,163 @@
+---
+title: AI Configuration
+description: Configure the AI assistant, model providers, and intelligent operations features.
+sidebar:
+  order: 2
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+EasyShell integrates AI capabilities through Spring AI, supporting multiple model providers for the chat assistant, scheduled inspections, and SOP automation.
+
+## Model Provider Configuration
+
+<Tabs>
+  <TabItem label="OpenAI">
+    ```yaml title="application.yml"
+    spring:
+      ai:
+        openai:
+          api-key: ${OPENAI_API_KEY}
+          chat:
+            options:
+              model: gpt-4o
+              temperature: 0.3
+              max-tokens: 4096
+    ```
+  </TabItem>
+  <TabItem label="Azure OpenAI">
+    ```yaml title="application.yml"
+    spring:
+      ai:
+        azure:
+          openai:
+            api-key: ${AZURE_OPENAI_KEY}
+            endpoint: https://your-resource.openai.azure.com
+            chat:
+              options:
+                deployment-name: gpt-4o
+                temperature: 0.3
+    ```
+  </TabItem>
+  <TabItem label="Custom / Self-hosted">
+    ```yaml title="application.yml"
+    spring:
+      ai:
+        openai:
+          api-key: ${API_KEY}
+          base-url: http://localhost:11434/v1
+          chat:
+            options:
+              model: llama3.1
+              temperature: 0.3
+    ```
+
+    <Aside type="tip">
+      Any OpenAI-compatible API (Ollama, vLLM, LocalAI) can be used by setting the `base-url` property.
+    </Aside>
+  </TabItem>
+</Tabs>
+
+## AI Features Toggle
+
+```yaml title="application.yml"
+easyshell:
+  ai:
+    enabled: true
+    chat:
+      enabled: true
+      system-prompt: |
+        You are EasyShell AI Assistant, an expert in Linux system administration,
+        shell scripting, and DevOps. Help users manage their servers effectively.
+        Always prioritize safety — warn about destructive commands.
+    inspection:
+      enabled: true
+      schedule: "0 0 2 * * ?"    # Daily at 2:00 AM
+      auto-approve: false         # Require manual approval for remediation
+    sop:
+      enabled: true
+```
+
+## Vector Store
+
+EasyShell uses a file-based vector store (SimpleVectorStore from Spring AI) for AI memory and SOP context retrieval.
+
+```yaml title="application.yml"
+easyshell:
+  ai:
+    vector-store:
+      path: /data/easyshell/vectors
+      dimensions: 1536             # Must match embedding model
+    embedding:
+      model: text-embedding-3-small
+```
+
+The vector store powers:
+- **AI Memory** — Retaining context from previous conversations
+- **SOP Matching** — Finding relevant SOPs based on the current situation
+- **Script Recommendations** — Suggesting scripts based on the problem description
+
+## Scheduled Inspections
+
+Inspections automatically check host health and generate reports.
+
+```yaml title="application.yml"
+easyshell:
+  ai:
+    inspection:
+      enabled: true
+      schedule: "0 0 2 * * ?"     # Cron expression
+      targets: ALL                 # ALL | cluster:production | tag:critical
+      checks:
+        - disk-usage
+        - memory-usage
+        - cpu-load
+        - zombie-processes
+        - failed-services
+        - security-updates
+        - log-anomalies
+      thresholds:
+        disk-usage-warning: 80     # percent
+        disk-usage-critical: 95
+        memory-usage-warning: 85
+        cpu-load-warning: 80
+```
+
+## Operation Approval
+
+For safety, destructive operations detected by AI can require manual approval.
+
+```yaml title="application.yml"
+easyshell:
+  ai:
+    approval:
+      enabled: true
+      auto-approve-safe: true      # Auto-approve read-only operations
+      require-approval:
+        - service-restart
+        - package-install
+        - file-modification
+        - user-management
+      notification:
+        channels:
+          - email
+          - webhook
+```
+
+<Aside type="caution">
+  In production environments, always enable operation approval for destructive commands. The AI assistant will flag risky operations and wait for human confirmation.
+</Aside>
+
+## Environment Variables
+
+All AI configuration can be set via environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `OPENAI_API_KEY` | OpenAI API key |
+| `AZURE_OPENAI_KEY` | Azure OpenAI API key |
+| `EASYSHELL_AI_ENABLED` | Enable/disable AI features |
+| `EASYSHELL_AI_CHAT_ENABLED` | Enable/disable chat assistant |
+| `EASYSHELL_AI_INSPECTION_ENABLED` | Enable/disable scheduled inspections |
+| `EASYSHELL_AI_INSPECTION_SCHEDULE` | Inspection cron schedule |

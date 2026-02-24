@@ -1,0 +1,163 @@
+---
+title: AI 配置
+description: 配置 AI 助手、模型提供商和智能运维功能。
+sidebar:
+  order: 2
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+EasyShell 通过 Spring AI 集成 AI 能力，支持多种模型提供商，用于聊天助手、定时巡检和 SOP 自动化。
+
+## 模型提供商配置
+
+<Tabs>
+  <TabItem label="OpenAI">
+    ```yaml title="application.yml"
+    spring:
+      ai:
+        openai:
+          api-key: ${OPENAI_API_KEY}
+          chat:
+            options:
+              model: gpt-4o
+              temperature: 0.3
+              max-tokens: 4096
+    ```
+  </TabItem>
+  <TabItem label="Azure OpenAI">
+    ```yaml title="application.yml"
+    spring:
+      ai:
+        azure:
+          openai:
+            api-key: ${AZURE_OPENAI_KEY}
+            endpoint: https://your-resource.openai.azure.com
+            chat:
+              options:
+                deployment-name: gpt-4o
+                temperature: 0.3
+    ```
+  </TabItem>
+  <TabItem label="自定义 / 自托管">
+    ```yaml title="application.yml"
+    spring:
+      ai:
+        openai:
+          api-key: ${API_KEY}
+          base-url: http://localhost:11434/v1
+          chat:
+            options:
+              model: llama3.1
+              temperature: 0.3
+    ```
+
+    <Aside type="tip">
+      任何兼容 OpenAI 的 API（Ollama、vLLM、LocalAI）都可以通过设置 `base-url` 属性来使用。
+    </Aside>
+  </TabItem>
+</Tabs>
+
+## AI 功能开关
+
+```yaml title="application.yml"
+easyshell:
+  ai:
+    enabled: true
+    chat:
+      enabled: true
+      system-prompt: |
+        You are EasyShell AI Assistant, an expert in Linux system administration,
+        shell scripting, and DevOps. Help users manage their servers effectively.
+        Always prioritize safety — warn about destructive commands.
+    inspection:
+      enabled: true
+      schedule: "0 0 2 * * ?"    # 每天凌晨 2:00
+      auto-approve: false         # 修复操作需人工审批
+    sop:
+      enabled: true
+```
+
+## 向量存储
+
+EasyShell 使用基于文件的向量存储（Spring AI 的 SimpleVectorStore）实现 AI 记忆和 SOP 上下文检索。
+
+```yaml title="application.yml"
+easyshell:
+  ai:
+    vector-store:
+      path: /data/easyshell/vectors
+      dimensions: 1536             # 必须与嵌入模型匹配
+    embedding:
+      model: text-embedding-3-small
+```
+
+向量存储支持以下功能：
+- **AI 记忆** — 保留之前对话的上下文
+- **SOP 匹配** — 根据当前情况查找相关 SOP
+- **脚本推荐** — 根据问题描述推荐脚本
+
+## 定时巡检
+
+巡检自动检查主机健康状况并生成报告。
+
+```yaml title="application.yml"
+easyshell:
+  ai:
+    inspection:
+      enabled: true
+      schedule: "0 0 2 * * ?"     # Cron 表达式
+      targets: ALL                 # ALL | cluster:production | tag:critical
+      checks:
+        - disk-usage
+        - memory-usage
+        - cpu-load
+        - zombie-processes
+        - failed-services
+        - security-updates
+        - log-anomalies
+      thresholds:
+        disk-usage-warning: 80     # 百分比
+        disk-usage-critical: 95
+        memory-usage-warning: 85
+        cpu-load-warning: 80
+```
+
+## 操作审批
+
+为安全起见，AI 检测到的破坏性操作可要求人工审批。
+
+```yaml title="application.yml"
+easyshell:
+  ai:
+    approval:
+      enabled: true
+      auto-approve-safe: true      # 自动批准只读操作
+      require-approval:
+        - service-restart
+        - package-install
+        - file-modification
+        - user-management
+      notification:
+        channels:
+          - email
+          - webhook
+```
+
+<Aside type="caution">
+  在生产环境中，务必为破坏性命令启用操作审批。AI 助手会标记高风险操作并等待人工确认。
+</Aside>
+
+## 环境变量
+
+所有 AI 配置均可通过环境变量设置：
+
+| 变量 | 说明 |
+|------|------|
+| `OPENAI_API_KEY` | OpenAI API 密钥 |
+| `AZURE_OPENAI_KEY` | Azure OpenAI API 密钥 |
+| `EASYSHELL_AI_ENABLED` | 启用/禁用 AI 功能 |
+| `EASYSHELL_AI_CHAT_ENABLED` | 启用/禁用聊天助手 |
+| `EASYSHELL_AI_INSPECTION_ENABLED` | 启用/禁用定时巡检 |
+| `EASYSHELL_AI_INSPECTION_SCHEDULE` | 巡检 Cron 计划 |

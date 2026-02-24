@@ -1,0 +1,111 @@
+---
+title: 手动安装
+description: 不使用 Docker 手动安装 EasyShell 各组件，获得最大控制权。
+sidebar:
+  order: 2
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+手动安装让你完全控制每个组件。这种方式适用于无法使用 Docker 的环境，或需要精细配置的场景。
+
+## 前置条件
+
+| 组件 | 要求 |
+|------|------|
+| Java | JDK 17 或更高版本 |
+| Node.js | 20 LTS |
+| MySQL | 8.0 或更高版本 |
+| Redis | 7.0 或更高版本 |
+| Go | 1.23（用于构建 Agent） |
+
+## 安装 MySQL
+
+<Tabs>
+  <TabItem label="Ubuntu/Debian">
+    ```bash
+    sudo apt update
+    sudo apt install mysql-server-8.0
+    sudo systemctl enable mysql
+    sudo systemctl start mysql
+    sudo mysql_secure_installation
+    ```
+  </TabItem>
+  <TabItem label="CentOS/RHEL">
+    ```bash
+    sudo dnf install mysql-server
+    sudo systemctl enable mysqld
+    sudo systemctl start mysqld
+    sudo mysql_secure_installation
+    ```
+  </TabItem>
+</Tabs>
+
+创建数据库和用户：
+
+```sql
+CREATE DATABASE easyshell CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'easyshell'@'localhost' IDENTIFIED BY '你的密码';
+GRANT ALL PRIVILEGES ON easyshell.* TO 'easyshell'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+## 安装 Redis
+
+<Tabs>
+  <TabItem label="Ubuntu/Debian">
+    ```bash
+    sudo apt install redis-server
+    sudo systemctl enable redis-server
+    sudo systemctl start redis-server
+    ```
+  </TabItem>
+  <TabItem label="CentOS/RHEL">
+    ```bash
+    sudo dnf install redis
+    sudo systemctl enable redis
+    sudo systemctl start redis
+    ```
+  </TabItem>
+</Tabs>
+
+## 构建并运行 Server
+
+```bash
+cd easyshell-server
+./gradlew bootJar
+```
+
+通过编辑 `application.yml` 或传递环境变量来配置 Server：
+
+```bash
+export SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/easyshell
+export SPRING_DATASOURCE_USERNAME=easyshell
+export SPRING_DATASOURCE_PASSWORD=你的密码
+export SPRING_REDIS_HOST=localhost
+export SPRING_REDIS_PORT=6379
+
+java -jar build/libs/easyshell-server-0.1.0-SNAPSHOT.jar --server.port=18080
+```
+
+## 构建并运行 Web 前端
+
+```bash
+cd easyshell-web
+npm install
+npm run build
+npm run preview
+```
+
+在生产环境中，使用 Nginx 提供构建后的静态文件。参见[生产环境部署](/zh-cn/installation/production/)指南。
+
+## 验证安装
+
+1. 打开 `http://localhost:5173`（开发环境）或配置的 URL
+2. 使用 `admin` / `admin123` 登录
+3. 检查系统状态页面确认服务连接正常
+
+<Aside type="tip">
+  使用 `--spring.profiles.active=dev` 启动 Server 以启用开发模式，开发模式会启用详细日志和 Hibernate DDL 自动更新。
+</Aside>

@@ -1,0 +1,292 @@
+---
+title: Agent 协议
+description: EasyShell Agent 与中心服务器之间的通信协议。
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+EasyShell Agent 使用 HTTP 进行常规操作，使用 WebSocket 进行实时交互，与中心服务器通信。
+
+## 架构概览
+
+```
+┌─────────────┐         HTTP (REST)          ┌─────────────┐
+│             │ ──────────────────────────▶   │             │
+│   Agent     │                              │   Server    │
+│  (Go 1.23)  │ ◀──────────────────────────  │ (Spring Boot│
+│             │       WebSocket (按需)        │  3.5.10)    │
+└─────────────┘                              └─────────────┘
+```
+
+## HTTP 端点
+
+### Agent 注册
+
+Agent 首次启动时，向服务器注册。
+
+```http
+POST /api/agent/register
+```
+
+```json
+{
+  "agentId": "agent_550e8400-e29b",
+  "hostname": "web-server-01",
+  "ipAddresses": ["192.168.1.100", "10.0.0.5"],
+  "os": "Ubuntu 22.04 LTS",
+  "kernel": "5.15.0-91-generic",
+  "arch": "amd64",
+  "cpuCores": 4,
+  "memoryMB": 8192,
+  "diskGB": 100,
+  "agentVersion": "1.2.0"
+}
+```
+
+服务器返回 Agent 令牌，用于后续请求：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "hostId": 42,
+    "token": "agt_xxxxxxxxxxxx",
+    "heartbeatInterval": 30,
+    "metricsInterval": 60
+  }
+}
+```
+
+### 心跳
+
+Agent 按配置的间隔发送心跳（默认：30 秒）。
+
+```http
+POST /api/agent/heartbeat
+```
+
+```json
+{
+  "agentId": "agent_550e8400-e29b",
+  "timestamp": "2026-02-20T06:00:00Z",
+  "status": "HEALTHY",
+  "uptime": 86400
+}
+```
+
+如果服务器连续 3 个间隔（默认 90 秒）未收到心跳，主机将被标记为 `OFFLINE`。
+
+### 指标上报
+
+系统指标按配置的间隔上报（默认：60 秒）。
+
+```http
+POST /api/agent/metrics
+```
+
+```json
+{
+  "agentId": "agent_550e8400-e29b",
+  "timestamp": "2026-02-20T06:00:00Z",
+  "cpu": {
+    "usagePercent": 23.5,
+    "loadAvg1m": 0.82,
+    "loadAvg5m": 0.65,
+    "loadAvg15m": 0.58
+  },
+  "memory": {
+    "totalMB": 8192,
+    "usedMB": 3456,
+    "availableMB": 4736,
+    "usagePercent": 42.2
+  },
+  "disk": [
+    {
+      "mountPoint": "/",
+      "totalGB": 100,
+      "usedGB": 45,
+      "usagePercent": 45.0
+    }
+  ],
+  "network": {
+    "rxBytesPerSec": 125000,
+    "txBytesPerSec": 89000,
+    "connections": 142
+  }
+}
+```
+
+### 配置轮询
+
+Agent 定期轮询配置更新。
+
+```http
+GET /api/agent/config?agentId={agentId}
+```
+
+响应包含待处理的配置变更：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "heartbeatInterval": 30,
+    "metricsInterval": 60,
+    "logLevel": "INFO",
+    "pendingTasks": [
+      {
+        "taskId": "task_20260220_001",
+        "type": "EXECUTE_SCRIPT"
+      }
+    ]
+  }
+}
+```
+
+## WebSocket 协议
+
+WebSocket 连接按需建立，用于实时操作。
+
+### 连接
+
+```
+ws://server:18080/ws/agent/{agentId}
+```
+
+请求头：
+
+```
+Authorization: Bearer agt_xxxxxxxxxxxx
+```
+
+### 消息格式
+
+所有 WebSocket 消息使用 JSON 格式，包含标准信封：
+
+```json
+{
+  "type": "MESSAGE_TYPE",
+  "id": "msg_unique_id",
+  "timestamp": "2026-02-20T06:00:00Z",
+  "payload": { ... }
+}
+```
+
+### 脚本执行
+
+<Tabs>
+  <TabItem label="Server → Agent">
+    ```json
+    {
+      "type": "EXECUTE_SCRIPT",
+      "id": "msg_001",
+      "payload": {
+        "taskId": "task_20260220_001",
+        "script": "#!/bin/bash\ndf -h",
+        "timeout": 30,
+        "params": {},
+        "workDir": "/tmp"
+      }
+    }
+    ```
+  </TabItem>
+  <TabItem label="Agent → Server（输出）">
+    ```json
+    {
+      "type": "SCRIPT_OUTPUT",
+      "id": "msg_002",
+      "payload": {
+        "taskId": "task_20260220_001",
+        "stream": "stdout",
+        "data": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda1       100G   45G   55G  45% /\n",
+        "sequence": 1
+      }
+    }
+    ```
+  </TabItem>
+  <TabItem label="Agent → Server（完成）">
+    ```json
+    {
+      "type": "SCRIPT_COMPLETE",
+      "id": "msg_003",
+      "payload": {
+        "taskId": "task_20260220_001",
+        "exitCode": 0,
+        "duration": 1250,
+        "startedAt": "2026-02-20T06:00:01Z",
+        "completedAt": "2026-02-20T06:00:02Z"
+      }
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+### 交互式终端
+
+WebSocket 还支持交互式终端会话，用于 Web 终端功能。
+
+```json
+{
+  "type": "TERMINAL_INPUT",
+  "payload": {
+    "sessionId": "term_abc123",
+    "data": "ls -la\n"
+  }
+}
+```
+
+```json
+{
+  "type": "TERMINAL_OUTPUT",
+  "payload": {
+    "sessionId": "term_abc123",
+    "data": "total 32\ndrwxr-xr-x 5 root root 4096 Feb 20 06:00 .\n..."
+  }
+}
+```
+
+终端窗口调整：
+
+```json
+{
+  "type": "TERMINAL_RESIZE",
+  "payload": {
+    "sessionId": "term_abc123",
+    "cols": 120,
+    "rows": 40
+  }
+}
+```
+
+## 安全
+
+<Aside type="caution">
+  Agent 令牌（`agt_xxxxxxxxxxxx`）属于敏感信息。请在 Agent 主机上安全存储，切勿在日志或脚本中暴露。
+</Aside>
+
+- 生产环境中所有 Agent 到服务器的通信应使用 HTTPS/WSS
+- Agent 令牌仅限单台主机使用，可从服务器端撤销
+- 脚本执行采用沙箱机制 — Agent 以可配置的用户权限运行脚本
+- WebSocket 连接在握手时进行身份认证，空闲 5 分钟后超时
+
+## 错误处理
+
+当 Agent 无法连接服务器时：
+
+1. **指数退避重试** — 从 5 秒开始，最大间隔 5 分钟
+2. **本地缓存指标** — 最多保留 1 小时的指标数据
+3. **重连后恢复** — 连接恢复后按顺序发送缓存数据
+
+脚本执行失败时：
+
+| 退出码 | 含义 |
+|--------|------|
+| 0 | 成功 |
+| 1-125 | 脚本自定义的失败 |
+| 126 | 权限被拒绝 |
+| 127 | 命令未找到 |
+| 128+N | 被信号 N 终止 |
+| -1 | 超时 |

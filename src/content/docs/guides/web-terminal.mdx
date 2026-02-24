@@ -1,0 +1,65 @@
+---
+title: Web Terminal
+description: Access interactive terminal sessions directly from your browser.
+sidebar:
+  order: 5
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+EasyShell's Web Terminal provides a fully interactive SSH terminal session in your browser. No local SSH client needed — just click and connect.
+
+## Connecting
+
+1. Navigate to any host's detail page
+2. Click the **Terminal** button
+3. A terminal session opens in a new panel
+
+The connection is established through the EasyShell agent running on the target host, using WebSocket for bidirectional communication.
+
+## Features
+
+### Full Terminal Emulation
+
+The web terminal supports:
+- Full ANSI color output
+- Cursor positioning and terminal modes
+- Tab completion
+- History navigation (up/down arrows)
+- Ctrl+C, Ctrl+D, and other control sequences
+- Window resizing (auto-adapts to browser window)
+
+### Multi-Session
+
+Open multiple terminal sessions to different hosts simultaneously. Each session runs in its own tab within the terminal panel.
+
+### Copy and Paste
+
+- **Copy** — Select text in the terminal to copy
+- **Paste** — Use `Ctrl+Shift+V` or right-click → Paste
+
+<Aside type="tip">
+  On macOS, use `Cmd+V` for paste. The terminal detects your platform and adjusts key bindings automatically.
+</Aside>
+
+## Security
+
+Terminal sessions are subject to the same security controls as script execution:
+
+- **Authentication** — Only authenticated users can open terminal sessions
+- **Authorization** — Role-based access determines which hosts a user can connect to
+- **Dangerous Command Detection** — Real-time monitoring for destructive commands
+- **Session Recording** — All terminal input/output is logged for audit compliance
+- **Idle Timeout** — Sessions are automatically closed after 30 minutes of inactivity
+
+## Connection Requirements
+
+The web terminal requires:
+- A running EasyShell agent on the target host
+- WebSocket connectivity between your browser and the EasyShell server
+- The agent must have permission to spawn shell processes
+
+If the connection fails, verify:
+1. The agent is running and connected (check host status indicator)
+2. No firewall is blocking WebSocket connections
+3. If using Nginx, ensure WebSocket proxy is configured (see [Production Deployment](/installation/production/))

@@ -1,0 +1,171 @@
+---
+title: 常见问题
+description: 关于 EasyShell 安装、使用和故障排除的常见问题。
+sidebar:
+  order: 101
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## 常规问题
+
+### EasyShell 是什么？
+
+EasyShell 是一个轻量级服务器管理和智能运维平台。它提供了一个集中式 Web 界面，用于管理多台 Linux 服务器、跨主机执行脚本，以及利用 AI 进行自动化运维。
+
+### EasyShell 是免费的吗？
+
+是的。EasyShell 是基于 MIT 许可证发布的开源软件。您可以自由地将其用于个人和商业用途。
+
+### Agent 支持哪些操作系统？
+
+EasyShell Agent 是一个单一的 Go 二进制文件，支持运行在：
+- **Linux** — amd64、arm64（主要目标平台）
+- **macOS** — amd64、arm64（用于开发/测试）
+
+目前不支持 Windows 平台的 Agent。
+
+### 最低服务器要求是什么？
+
+| 组件 | 最低配置 | 推荐配置 |
+|------|----------|----------|
+| 服务端 | 2 CPU，4GB 内存，20GB 磁盘 | 4 CPU，8GB 内存，50GB 磁盘 |
+| Agent | 1 CPU，128MB 内存，50MB 磁盘 | 1 CPU，256MB 内存，100MB 磁盘 |
+| MySQL | 8.0+ | 8.0+ |
+| Redis | 7.0+ | 7.0+ |
+
+## 安装
+
+### 如何安装 EasyShell？
+
+最快的方式是使用 Docker Compose：
+
+```bash
+git clone https://github.com/easyshell-ai/easyshell.git
+cd easyshell
+docker compose up -d
+cd easyshell-server && ./gradlew bootRun
+cd easyshell-web && npm install && npm run dev
+```
+
+详细说明请参阅 [Docker 安装指南](/zh-cn/installation/docker)。
+
+### 服务端启动时出现数据库连接错误
+
+验证 MySQL 是否正在运行且可访问：
+
+```bash
+docker compose ps
+docker compose logs mysql
+```
+
+常见原因：
+- MySQL 尚未完成初始化（`docker compose up` 后等待 30 秒）
+- 3306 端口被其他 MySQL 实例占用
+- `docker-compose.yml` 中的凭据与 `application.yml` 不匹配
+
+### Web 前端显示空白页
+
+1. 检查浏览器控制台错误（F12 → Console）
+2. 验证服务端是否在 18080 端口运行
+3. 检查 CORS 是否配置为允许 `http://localhost:5173`
+4. 清除浏览器缓存并重新加载
+
+## Agent
+
+### 如何将 Agent 部署到远程主机？
+
+```bash
+# 复制 Agent 二进制文件
+scp easyshell-agent-linux-amd64 user@remote:/usr/local/bin/easyshell-agent
+
+# SSH 登录到主机并启动 Agent
+ssh user@remote
+chmod +x /usr/local/bin/easyshell-agent
+easyshell-agent --server http://YOUR_SERVER_IP:18080
+```
+
+systemd 服务配置请参阅 [Agent 部署指南](/zh-cn/installation/agent)。
+
+### Agent 显示"connection refused"
+
+- 验证服务端是否可从 Agent 主机访问：`curl http://SERVER_IP:18080/api/health`
+- 检查防火墙规则 — 18080 端口必须开放
+- 确保 Agent 配置中的服务器 URL 正确（使用 IP，而非 `localhost`）
+
+### Agent 多久上报一次指标？
+
+默认设置：
+- **心跳**：每 30 秒
+- **指标**：每 60 秒
+
+这些间隔可在服务端设置中配置。请参阅[服务端配置](/zh-cn/configuration/server-config)。
+
+## 脚本执行
+
+### 可以同时在多台主机上执行脚本吗？
+
+可以。选择多台主机或整个集群，然后执行脚本。EasyShell 支持三种执行策略：
+- **并行** — 所有主机同时执行
+- **串行** — 逐台执行，失败时停止
+- **滚动** — 批量执行，可配置批次大小
+
+### 脚本超时会怎样？
+
+Agent 会在配置的超时时间（默认：5 分钟）后终止脚本进程。执行记录会在历史中标记为 `TIMEOUT`。您可以在[服务端配置](/zh-cn/configuration/server-config)中按脚本或全局调整超时时间。
+
+### 可以使用脚本参数吗？
+
+可以。使用环境变量在脚本中定义参数，然后在执行时传入值：
+
+```bash
+#!/bin/bash
+echo "Checking disk usage threshold: ${THRESHOLD:-80}%"
+df -h | awk -v threshold="$THRESHOLD" '{if(NR>1 && $5+0 > threshold) print $0}'
+```
+
+## AI 功能
+
+### 需要 OpenAI API 密钥吗？
+
+AI 功能是可选的。EasyShell 在没有 AI 的情况下也能完全正常运行。如果您想使用 AI 助手、定时巡检或 SOP 自动化，则需要来自任何 OpenAI 兼容提供商的 API 密钥。
+
+请参阅 [AI 配置](/zh-cn/configuration/ai-config) 了解支持的提供商。
+
+### 可以使用本地 LLM 代替 OpenAI 吗？
+
+可以。EasyShell 支持任何 OpenAI 兼容的 API。您可以使用：
+- **Ollama** — 本地 LLM，设置 `base-url: http://localhost:11434/v1`
+- **vLLM** — 高性能推理服务器
+- **LocalAI** — OpenAI 的直接替代品
+
+### 我的数据会发送到外部 AI 服务吗？
+
+仅在您主动使用 AI 功能（对话、巡检）时才会发送。发送的数据包括：
+- 您的对话消息
+- 主机系统信息（用于巡检）
+- 脚本内容（当要求 AI 分析脚本时）
+
+如果禁用 AI 功能，则不会发送任何数据。
+
+## 安全
+
+### 将 EasyShell 暴露到互联网安全吗？
+
+我们建议将 EasyShell 放在反向代理（Nginx/Caddy）后面，并配置：
+- 启用 HTTPS
+- 强身份认证
+- 速率限制
+- 如果可能，设置 IP 白名单
+
+完整的安全检查清单请参阅[安全配置指南](/zh-cn/configuration/security)。
+
+### Agent 凭据如何存储？
+
+Agent Token 存储在服务端数据库（MySQL）中。在 Agent 端，Token 存储在本地配置文件中。我们建议：
+- 将 Agent 配置文件的权限设置为 `600`
+- 所有 Agent 与服务端的通信使用 TLS
+
+<Aside type="tip">
+  还有问题？请在 [GitHub](https://github.com/easyshell-ai/easyshell/issues) 上提交 Issue 或在仓库中发起讨论。
+</Aside>

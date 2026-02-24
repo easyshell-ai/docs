@@ -1,0 +1,32 @@
+---
+title: 欢迎使用 EasyShell
+description: 轻量级服务器管理与智能运维平台文档。
+template: splash
+hero:
+  tagline: Server-Agent 架构 · 批量脚本执行 · 实时日志 · AI 智能运维
+  actions:
+    - text: 快速开始
+      link: /zh-cn/getting-started/quick-start/
+      icon: right-arrow
+      variant: primary
+    - text: 在 GitHub 查看
+      link: https://github.com/easyshell-ai/easyshell
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid stagger>
+  <Card title="批量执行" icon="rocket">
+    在数百台主机上同时执行 Shell 脚本，实时日志流和进度追踪。
+  </Card>
+  <Card title="AI 运维" icon="star">
+    自然语言驱动的智能运维 —— 描述需求，AI 助手自动处理。
+  </Card>
+  <Card title="Web 终端" icon="laptop">
+    基于浏览器的交互式终端，完整 SSH 功能，无需安装客户端。
+  </Card>
+  <Card title="云端脚本" icon="open-book">
+    社区共享的运维脚本库，支持版本管理、安全扫描和一键部署。
+  </Card>
+</CardGrid>

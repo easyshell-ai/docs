@@ -1,0 +1,292 @@
+---
+title: Agent Protocol
+description: Communication protocol between the EasyShell Agent and the central server.
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+The EasyShell Agent communicates with the central server using HTTP for routine operations and WebSocket for real-time interactions.
+
+## Architecture Overview
+
+```
+┌─────────────┐         HTTP (REST)          ┌─────────────┐
+│             │ ──────────────────────────▶   │             │
+│   Agent     │                              │   Server    │
+│  (Go 1.23)  │ ◀──────────────────────────  │ (Spring Boot│
+│             │       WebSocket (on-demand)   │  3.5.10)    │
+└─────────────┘                              └─────────────┘
+```
+
+## HTTP Endpoints
+
+### Agent Registration
+
+When an agent starts for the first time, it registers with the server.
+
+```http
+POST /api/agent/register
+```
+
+```json
+{
+  "agentId": "agent_550e8400-e29b",
+  "hostname": "web-server-01",
+  "ipAddresses": ["192.168.1.100", "10.0.0.5"],
+  "os": "Ubuntu 22.04 LTS",
+  "kernel": "5.15.0-91-generic",
+  "arch": "amd64",
+  "cpuCores": 4,
+  "memoryMB": 8192,
+  "diskGB": 100,
+  "agentVersion": "1.2.0"
+}
+```
+
+The server responds with an agent token used for subsequent requests:
+
+```json
+{
+  "code": 200,
+  "data": {
+    "hostId": 42,
+    "token": "agt_xxxxxxxxxxxx",
+    "heartbeatInterval": 30,
+    "metricsInterval": 60
+  }
+}
+```
+
+### Heartbeat
+
+The agent sends a heartbeat at the configured interval (default: 30 seconds).
+
+```http
+POST /api/agent/heartbeat
+```
+
+```json
+{
+  "agentId": "agent_550e8400-e29b",
+  "timestamp": "2026-02-20T06:00:00Z",
+  "status": "HEALTHY",
+  "uptime": 86400
+}
+```
+
+If the server does not receive a heartbeat for 3 consecutive intervals (90 seconds by default), the host is marked `OFFLINE`.
+
+### Metrics Reporting
+
+System metrics are reported at the configured interval (default: 60 seconds).
+
+```http
+POST /api/agent/metrics
+```
+
+```json
+{
+  "agentId": "agent_550e8400-e29b",
+  "timestamp": "2026-02-20T06:00:00Z",
+  "cpu": {
+    "usagePercent": 23.5,
+    "loadAvg1m": 0.82,
+    "loadAvg5m": 0.65,
+    "loadAvg15m": 0.58
+  },
+  "memory": {
+    "totalMB": 8192,
+    "usedMB": 3456,
+    "availableMB": 4736,
+    "usagePercent": 42.2
+  },
+  "disk": [
+    {
+      "mountPoint": "/",
+      "totalGB": 100,
+      "usedGB": 45,
+      "usagePercent": 45.0
+    }
+  ],
+  "network": {
+    "rxBytesPerSec": 125000,
+    "txBytesPerSec": 89000,
+    "connections": 142
+  }
+}
+```
+
+### Config Polling
+
+The agent periodically polls for configuration updates.
+
+```http
+GET /api/agent/config?agentId={agentId}
+```
+
+Response includes any pending configuration changes:
+
+```json
+{
+  "code": 200,
+  "data": {
+    "heartbeatInterval": 30,
+    "metricsInterval": 60,
+    "logLevel": "INFO",
+    "pendingTasks": [
+      {
+        "taskId": "task_20260220_001",
+        "type": "EXECUTE_SCRIPT"
+      }
+    ]
+  }
+}
+```
+
+## WebSocket Protocol
+
+WebSocket connections are established on-demand for real-time operations.
+
+### Connection
+
+```
+ws://server:18080/ws/agent/{agentId}
+```
+
+Headers:
+
+```
+Authorization: Bearer agt_xxxxxxxxxxxx
+```
+
+### Message Format
+
+All WebSocket messages use JSON with a standard envelope:
+
+```json
+{
+  "type": "MESSAGE_TYPE",
+  "id": "msg_unique_id",
+  "timestamp": "2026-02-20T06:00:00Z",
+  "payload": { ... }
+}
+```
+
+### Script Execution
+
+<Tabs>
+  <TabItem label="Server → Agent">
+    ```json
+    {
+      "type": "EXECUTE_SCRIPT",
+      "id": "msg_001",
+      "payload": {
+        "taskId": "task_20260220_001",
+        "script": "#!/bin/bash\ndf -h",
+        "timeout": 30,
+        "params": {},
+        "workDir": "/tmp"
+      }
+    }
+    ```
+  </TabItem>
+  <TabItem label="Agent → Server (output)">
+    ```json
+    {
+      "type": "SCRIPT_OUTPUT",
+      "id": "msg_002",
+      "payload": {
+        "taskId": "task_20260220_001",
+        "stream": "stdout",
+        "data": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda1       100G   45G   55G  45% /\n",
+        "sequence": 1
+      }
+    }
+    ```
+  </TabItem>
+  <TabItem label="Agent → Server (complete)">
+    ```json
+    {
+      "type": "SCRIPT_COMPLETE",
+      "id": "msg_003",
+      "payload": {
+        "taskId": "task_20260220_001",
+        "exitCode": 0,
+        "duration": 1250,
+        "startedAt": "2026-02-20T06:00:01Z",
+        "completedAt": "2026-02-20T06:00:02Z"
+      }
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+### Interactive Terminal
+
+The WebSocket also supports interactive terminal sessions for the web terminal feature.
+
+```json
+{
+  "type": "TERMINAL_INPUT",
+  "payload": {
+    "sessionId": "term_abc123",
+    "data": "ls -la\n"
+  }
+}
+```
+
+```json
+{
+  "type": "TERMINAL_OUTPUT",
+  "payload": {
+    "sessionId": "term_abc123",
+    "data": "total 32\ndrwxr-xr-x 5 root root 4096 Feb 20 06:00 .\n..."
+  }
+}
+```
+
+Terminal resize:
+
+```json
+{
+  "type": "TERMINAL_RESIZE",
+  "payload": {
+    "sessionId": "term_abc123",
+    "cols": 120,
+    "rows": 40
+  }
+}
+```
+
+## Security
+
+<Aside type="caution">
+  The agent token (`agt_xxxxxxxxxxxx`) is sensitive. Store it securely on the agent host and never expose it in logs or scripts.
+</Aside>
+
+- All agent-to-server communication should use HTTPS/WSS in production
+- Agent tokens are scoped to a single host and can be revoked from the server
+- Script execution is sandboxed — the agent runs scripts with configurable user permissions
+- WebSocket connections are authenticated on handshake and time out after 5 minutes of inactivity
+
+## Error Handling
+
+If the agent cannot reach the server:
+
+1. **Retry with exponential backoff** — starting at 5 seconds, maxing at 5 minutes
+2. **Buffer metrics locally** — up to 1 hour of metrics are retained
+3. **Resume on reconnect** — buffered data is sent in order once connection is restored
+
+If a script execution fails:
+
+| Exit Code | Meaning |
+|-----------|---------|
+| 0 | Success |
+| 1-125 | Script-defined failure |
+| 126 | Permission denied |
+| 127 | Command not found |
+| 128+N | Killed by signal N |
+| -1 | Timeout exceeded |

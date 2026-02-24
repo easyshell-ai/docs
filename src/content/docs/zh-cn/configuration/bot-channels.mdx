@@ -1,0 +1,230 @@
+---
+title: 机器人通道
+description: 配置 Telegram、Discord、钉钉机器人通道，连接 AI 助手进行交互。
+sidebar:
+  order: 4
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+EasyShell 支持多种消息通道连接 AI 助手，让团队成员通过 Telegram、Discord 或钉钉与 EasyShell 交互。
+
+## Telegram 机器人
+
+### 1. 创建 Telegram Bot
+
+1. 在 Telegram 中搜索 **@BotFather**
+2. 发送 `/newbot` 命令
+3. 按提示设置 Bot 名称和用户名
+4. 创建成功后，BotFather 会返回 **Bot Token**（格式：`123456789:ABCdefGHI-jklMNO...`）
+5. 妥善保存此 Token
+
+### 2. 获取 Chat ID
+
+<Tabs>
+<TabItem label="通过 API">
+
+1. 先给 Bot 发送一条消息（或将 Bot 加入群组发一条消息）
+2. 浏览器访问：`https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
+3. 在返回的 JSON 中找到 `"chat":{"id": 123456}` 即为 Chat ID
+
+</TabItem>
+<TabItem label="使用辅助 Bot">
+
+在 Telegram 搜索 **@userinfobot**，发送任意消息即可获取你的 Chat ID。
+
+</TabItem>
+</Tabs>
+
+### 3. 在 EasyShell 中配置
+
+1. 进入 **系统管理 → AI 设置 → 消息通道 → Telegram**
+2. 填写以下配置项：
+
+| 配置项 | 说明 | 是否必填 |
+|--------|------|----------|
+| Bot Token | 从 BotFather 获取的 Token | 必填 |
+| Allowed Chat IDs | 允许的 Chat ID，多个用英文逗号分隔 | 选填（留空则接受所有消息） |
+
+3. 打开 **启用** 开关
+4. 配置完成后系统自动启动长轮询，Bot 会自动接收并回复消息
+
+<Aside type="tip">
+Telegram 采用**长轮询模式（Long Polling）**，无需公网 IP 或 HTTPS 证书。轮询超时为 30 秒，单条回复消息长度上限 4096 字符。
+</Aside>
+
+---
+
+## Discord 机器人
+
+### 1. 创建 Discord Bot
+
+1. 访问 [Discord Developer Portal](https://discord.com/developers/applications)
+2. 点击 **New Application**，输入应用名称并创建
+3. 在左侧菜单进入 **Bot** 页面
+4. 点击 **Add Bot** 创建机器人
+5. 点击 **Reset Token** 获取 Bot Token，妥善保存
+6. 在 **Privileged Gateway Intents** 下开启 **MESSAGE CONTENT INTENT**（重要，否则无法读取消息内容）
+
+### 2. 邀请 Bot 到服务器
+
+1. 在左侧菜单进入 **OAuth2 → URL Generator**
+2. **Scopes** 勾选 `bot`
+3. **Bot Permissions** 勾选：
+   - `Send Messages`（发送消息）
+   - `Read Message History`（读取消息历史）
+   - `View Channels`（查看频道）
+4. 复制生成的邀请链接，在浏览器中打开
+5. 选择目标服务器，确认授权
+
+### 3. 获取 Guild ID 和 Channel ID
+
+1. 在 Discord 客户端中开启 **开发者模式**：
+   - 用户设置 → 高级 → 开启「开发者模式」
+2. 获取 **Guild ID**（服务器 ID）：右键点击服务器名称 → 复制服务器 ID
+3. 获取 **Channel ID**（频道 ID）：右键点击目标文字频道 → 复制频道 ID
+
+### 4. 在 EasyShell 中配置
+
+1. 进入 **系统管理 → AI 设置 → 消息通道 → Discord**
+2. 填写以下配置项：
+
+| 配置项 | 说明 | 是否必填 |
+|--------|------|----------|
+| Bot Token | Discord Bot Token | 必填 |
+| Guild ID | 服务器 ID | 必填 |
+| Allowed Channel IDs | 允许的频道 ID，多个用英文逗号分隔 | 选填（留空则监听所有频道） |
+
+3. 打开 **启用** 开关
+
+<Aside type="tip">
+Discord 采用 **REST 轮询模式**，每 2 秒拉取一次新消息，无需公网 IP。单条回复消息长度上限 2000 字符。Bot 会自动过滤自己发送的消息，避免循环回复。
+</Aside>
+
+---
+
+## 钉钉机器人
+
+### 1. 创建钉钉自定义机器人
+
+1. 打开钉钉电脑客户端，进入目标群聊
+2. 点击群设置 → **智能群助手** → **添加机器人**
+3. 选择 **自定义（通过 Webhook 接入）**
+4. 设置机器人名称和头像
+5. 安全设置选择 **加签**，记录下 **Secret**（以 `SEC` 开头的字符串）
+6. 点击完成，复制生成的 **Webhook URL**
+
+### 2. 配置回调地址（接收用户消息）
+
+<Aside type="caution">
+群内自定义机器人仅支持通过 Webhook URL **主动推送**消息到群，不支持接收用户消息。如需接收用户消息并自动回复，需要在 [钉钉开放平台](https://open-dev.dingtalk.com) 创建企业内部应用类型的机器人，并配置消息接收地址。
+</Aside>
+
+**企业内部应用机器人配置步骤：**
+
+1. 登录 [钉钉开放平台](https://open-dev.dingtalk.com)
+2. 创建企业内部应用 → 添加机器人能力
+3. 在消息接收地址中填写 EasyShell 的回调地址：
+   ```
+   https://<你的服务器域名>:<端口>/api/v1/webhook/dingtalk
+   ```
+4. 回调地址要求：
+   - 必须使用 **HTTPS** 协议
+   - 必须能从公网访问
+   - 如服务器在内网，可使用 ngrok、frp 等内网穿透工具
+
+### 3. 在 EasyShell 中配置
+
+1. 进入 **系统管理 → AI 设置 → 消息通道 → 钉钉**
+2. 填写以下配置项：
+
+| 配置项 | 说明 | 是否必填 |
+|--------|------|----------|
+| Webhook URL | 钉钉 Webhook 地址 | 必填 |
+| Secret | 加签密钥（以 SEC 开头） | 推荐配置 |
+
+3. 打开 **启用** 开关
+
+<Aside type="tip">
+钉钉采用 **Webhook 回调模式**，需要服务器有公网可访问的 HTTPS 地址。签名验证使用 HmacSHA256 算法，确保消息来源可信。如果只需要主动推送消息到钉钉群（不需要接收用户消息），只需配置 Webhook URL 即可。
+</Aside>
+
+---
+
+
+## 会话上下文设置
+
+机器人通道支持持久化对话上下文，AI 可以在一次会话中记住之前的消息。这些设置对所有通道全局生效。
+
+进入 **系统管理 → AI 设置 → 消息通道**，找到 **通道上下文设置** 面板。
+
+### 配置选项
+
+| 配置项 | 说明 | 默认值 |
+|--------|------|--------|
+| 上下文模式 | **持久化** — AI 在会话内记住对话历史。**无状态** — 每条消息独立处理，不保留历史。 | 持久化 |
+| 会话超时 | 空闲多少分钟后会话过期、上下文清除。设为 0 则不超时。 | 30 分钟 |
+| 默认供应商 | 机器人通道对话使用的 AI 供应商（如 OpenAI、Anthropic 等）。未设置时使用系统默认 AI 供应商。 | 系统默认 |
+| 默认模型 | 机器人通道对话使用的 AI 模型。未设置时使用供应商的默认模型。 | 供应商默认 |
+
+<Aside type="tip">
+每个通道还可以单独覆盖默认供应商和模型。通道级别的设置优先于此处的全局默认配置。
+</Aside>
+
+### 通道级供应商与模型
+
+在每个通道的配置区域（Telegram、Discord、钉钉）中，可以单独设置该通道的 **供应商** 和 **模型**，实现不同通道使用不同的 AI 模型。如留空，则使用上述全局通道默认设置。
+
+### 重置对话上下文
+
+用户可以在任意机器人通道中发送 `/new` 命令来 **重置对话上下文**，开始全新会话。这将清除该用户/聊天的所有历史消息记录。
+
+<Aside type="note">
+会话上下文存储在服务器内存中。如果服务器重启，所有活跃会话将被清除，对话将从头开始。
+</Aside>
+
+---
+
+## 常见问题
+
+### 机器人配置后无响应？
+
+1. 确认对应通道的 **启用** 开关已打开
+2. 查看 EasyShell 服务器日志，搜索关键字 `Started channel` 或 `Failed to start channel`
+3. 确认 Bot Token 或 Webhook URL 填写正确
+4. 确认 AI 设置中已配置可用的模型提供商（如 OpenAI、DeepSeek 等）
+
+### Telegram / Discord Bot 如何重启？
+
+在 **AI 设置** 页面，关闭对应通道的启用开关，等待几秒后重新打开即可。系统会自动停止旧连接并建立新连接。
+
+### 钉钉机器人收不到消息？
+
+1. 确认使用的是企业内部应用机器人（非群自定义机器人），且已配置消息接收地址
+2. 确认回调地址 `https://<域名>/api/v1/webhook/dingtalk` 可从公网访问
+3. 检查加签密钥（Secret）是否与钉钉开放平台配置一致
+4. 查看服务器日志是否有签名验证失败的记录
+
+### 如何查看机器人运行状态？
+
+查看 EasyShell 服务器启动日志：
+
+```
+Started channel: telegram          — Telegram 机器人已启动
+Started channel: discord           — Discord 机器人已启动
+DingTalk bot started (webhook mode) — 钉钉机器人已启动
+Failed to start channel: xxx       — 启动失败，查看错误详情
+```
+
+
+### 机器人不记得对话历史？
+
+1. 检查 **通道上下文设置** 中的 **上下文模式** 是否为 **持久化**（而非无状态）
+2. 确认 **会话超时** 时间未到期 — 如果用户空闲时间超过配置的超时时间，会话已被清除
+3. 查看服务器日志中是否有 `Session expired for` 消息，表示会话因超时被清理
+4. 注意服务器重启会清除所有会话上下文
+
+### 如何让不同通道使用不同的 AI 模型？
+
+在每个通道的配置区域中单独设置 **供应商** 和 **模型**。例如，Telegram 使用 GPT-4o，Discord 使用 Claude。如果通道未设置供应商/模型，则依次回退到全局通道默认配置、系统 AI 设置。

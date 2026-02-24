@@ -1,0 +1,231 @@
+---
+title: Security Configuration
+description: Harden your EasyShell deployment with authentication, authorization, and network security best practices.
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Authentication
+
+### Default Credentials
+
+EasyShell ships with a default admin account:
+
+| Field | Value |
+|-------|-------|
+| Username | `admin` |
+| Password | `admin123` |
+
+<Aside type="danger">
+  Change the default password immediately after first login. Navigate to **System Settings → User Management → Edit admin user** to set a strong password.
+</Aside>
+
+### JWT Configuration
+
+```yaml title="application.yml"
+easyshell:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}          # Required in production
+      expiration: 86400              # 24 hours
+      refresh-expiration: 604800     # 7 days
+      issuer: easyshell
+```
+
+Generate a secure JWT secret:
+
+```bash
+openssl rand -base64 64
+```
+
+### Session Management
+
+- Sessions are stored in Redis for horizontal scalability
+- Idle sessions expire after the configured JWT expiration period
+- Active sessions can be listed and revoked from the admin panel
+
+## Authorization
+
+EasyShell uses role-based access control (RBAC):
+
+| Role | Permissions |
+|------|-------------|
+| `ADMIN` | Full system access, user management, system configuration |
+| `OPERATOR` | Execute scripts, manage hosts, view reports |
+| `VIEWER` | Read-only access to hosts, scripts, and execution history |
+
+```yaml title="application.yml"
+easyshell:
+  security:
+    default-role: VIEWER
+    allow-self-registration: false
+```
+
+## Network Security
+
+### CORS
+
+```yaml title="application.yml"
+easyshell:
+  security:
+    cors:
+      allowed-origins:
+        - https://easyshell.ai
+        - https://your-domain.com
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+      allowed-headers:
+        - Authorization
+        - Content-Type
+      max-age: 3600
+```
+
+### Rate Limiting
+
+```yaml title="application.yml"
+easyshell:
+  security:
+    rate-limit:
+      enabled: true
+      requests-per-minute: 60
+      login-attempts-per-minute: 5
+      burst-size: 10
+```
+
+### HTTPS Setup
+
+<Tabs>
+  <TabItem label="Nginx Reverse Proxy">
+    ```nginx title="nginx.conf"
+    server {
+        listen 443 ssl http2;
+        server_name easyshell.example.com;
+
+        ssl_certificate /etc/letsencrypt/live/easyshell.example.com/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/easyshell.example.com/privkey.pem;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+
+        location / {
+            proxy_pass http://127.0.0.1:5173;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location /api/ {
+            proxy_pass http://127.0.0.1:18080;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /ws/ {
+            proxy_pass http://127.0.0.1:18080;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+        }
+    }
+    ```
+  </TabItem>
+  <TabItem label="Spring Boot Embedded">
+    ```yaml title="application.yml"
+    server:
+      ssl:
+        enabled: true
+        key-store: classpath:keystore.p12
+        key-store-password: ${SSL_KEYSTORE_PASSWORD}
+        key-store-type: PKCS12
+        key-alias: easyshell
+    ```
+  </TabItem>
+</Tabs>
+
+## Agent Security
+
+### Agent Token Rotation
+
+Agent tokens should be rotated periodically:
+
+```bash
+# Revoke and regenerate agent token via API
+curl -X POST http://localhost:18080/api/agent/rotate-token \
+  -H "Authorization: Bearer <admin-token>" \
+  -d '{"agentId": "agent_550e8400-e29b"}'
+```
+
+### Secure Agent Communication
+
+In production, ensure agent-to-server communication uses TLS:
+
+```yaml title="agent.yml"
+server:
+  url: https://easyshell.example.com:18080
+  tls:
+    verify: true
+    ca-cert: /etc/easyshell/ca.pem
+```
+
+### Script Execution Isolation
+
+```yaml title="application.yml"
+easyshell:
+  execution:
+    run-as-user: easyshell           # Non-root user for script execution
+    allowed-commands: []             # Empty = all allowed; restrict for safety
+    blocked-commands:
+      - rm -rf /
+      - mkfs
+      - dd if=/dev/zero
+    sandbox:
+      enabled: false                 # Enable for strict isolation (requires cgroups)
+      memory-limit: 512m
+      cpu-limit: 1.0
+```
+
+<Aside type="tip">
+  For maximum security, run the agent as a non-root user and use the `blocked-commands` list to prevent destructive operations. Enable sandbox mode on hosts that execute untrusted scripts.
+</Aside>
+
+## Audit Logging
+
+All security-relevant actions are logged:
+
+```yaml title="application.yml"
+easyshell:
+  audit:
+    enabled: true
+    log-file: /var/log/easyshell/audit.log
+    events:
+      - LOGIN
+      - LOGOUT
+      - LOGIN_FAILED
+      - SCRIPT_EXECUTE
+      - HOST_ADD
+      - HOST_DELETE
+      - USER_CREATE
+      - USER_DELETE
+      - CONFIG_CHANGE
+```
+
+## Security Checklist
+
+Before deploying to production, verify:
+
+- [ ] Default admin password changed
+- [ ] JWT secret set to a strong random value
+- [ ] HTTPS enabled with valid certificates
+- [ ] CORS origins restricted to your domain
+- [ ] Rate limiting enabled
+- [ ] Agent tokens using TLS communication
+- [ ] Audit logging enabled
+- [ ] Script execution running as non-root user
+- [ ] Database credentials not using defaults
+- [ ] Redis password set (if exposed to network)

@@ -1,0 +1,295 @@
+---
+title: Server API
+description: EasyShell 中心管理服务器的 RESTful API 参考文档。
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+EasyShell 服务器在端口 `18080` 上暴露 RESTful API。除非另有说明，所有端点均需要身份认证。
+
+## 身份认证
+
+所有 API 请求必须包含通过登录端点获取的有效会话令牌。
+
+```bash
+# 登录并获取令牌
+curl -X POST http://localhost:18080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "admin123"}'
+```
+
+响应：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiJ9...",
+    "user": {
+      "id": 1,
+      "username": "admin",
+      "role": "ADMIN"
+    }
+  }
+}
+```
+
+在后续请求中携带令牌：
+
+```bash
+curl -H "Authorization: Bearer <token>" http://localhost:18080/api/hosts
+```
+
+## 主机管理
+
+### 获取主机列表
+
+```http
+GET /api/hosts
+```
+
+查询参数：
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `page` | number | 0 | 页码（从零开始） |
+| `size` | number | 20 | 每页数量 |
+| `search` | string | — | 按主机名或 IP 过滤 |
+| `status` | string | — | 按状态过滤：`ONLINE`、`OFFLINE`、`WARNING` |
+| `clusterId` | number | — | 按集群 ID 过滤 |
+
+### 获取主机详情
+
+```http
+GET /api/hosts/{id}
+```
+
+返回主机信息，包括系统信息、Agent 状态、资源指标和标签。
+
+### 注册主机
+
+```http
+POST /api/hosts
+```
+
+```json
+{
+  "hostname": "web-server-01",
+  "ip": "192.168.1.100",
+  "sshPort": 22,
+  "authType": "PASSWORD",
+  "username": "root",
+  "password": "...",
+  "tags": { "env": "production", "role": "web" }
+}
+```
+
+### 删除主机
+
+```http
+DELETE /api/hosts/{id}
+```
+
+<Aside type="caution">
+  删除主机将移除所有关联的执行历史和指标数据。此操作不可撤销。
+</Aside>
+
+## 脚本管理
+
+### 获取脚本列表
+
+```http
+GET /api/scripts
+```
+
+查询参数：
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `page` | number | 页码 |
+| `size` | number | 每页数量 |
+| `type` | string | 脚本类型：`BASH`、`PYTHON`、`POWERSHELL` |
+| `category` | string | 分类过滤 |
+
+### 创建脚本
+
+```http
+POST /api/scripts
+```
+
+```json
+{
+  "name": "Check Disk Usage",
+  "description": "Reports disk usage across all mounted filesystems",
+  "type": "BASH",
+  "content": "#!/bin/bash\ndf -h | grep -v tmpfs",
+  "timeout": 30,
+  "tags": ["monitoring", "disk"]
+}
+```
+
+### 执行脚本
+
+```http
+POST /api/scripts/{id}/execute
+```
+
+```json
+{
+  "hostIds": [1, 2, 3],
+  "params": {
+    "threshold": "80"
+  },
+  "async": true
+}
+```
+
+响应：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "taskId": "task_20260220_001",
+    "status": "RUNNING",
+    "hostCount": 3
+  }
+}
+```
+
+## 任务执行
+
+### 获取任务状态
+
+```http
+GET /api/tasks/{taskId}
+```
+
+返回任务总体状态和每台主机的执行结果。
+
+### 获取任务日志
+
+```http
+GET /api/tasks/{taskId}/logs
+```
+
+查询参数：
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `hostId` | number | 按指定主机过滤日志 |
+| `follow` | boolean | 实时流式传输日志（SSE） |
+
+<Aside type="tip">
+  如需实时日志流，建议使用 WebSocket 端点 `/ws/logs/{taskId}`。它提供更低的延迟和双向通信能力。
+</Aside>
+
+## 集群管理
+
+### 获取集群列表
+
+```http
+GET /api/clusters
+```
+
+### 创建集群
+
+```http
+POST /api/clusters
+```
+
+```json
+{
+  "name": "Production Web Servers",
+  "description": "All production web server instances",
+  "hostIds": [1, 2, 5, 8]
+}
+```
+
+### 在集群上执行
+
+```http
+POST /api/clusters/{id}/execute
+```
+
+```json
+{
+  "scriptId": 10,
+  "params": {},
+  "strategy": "PARALLEL"
+}
+```
+
+执行策略：
+
+| 策略 | 说明 |
+|------|------|
+| `PARALLEL` | 在所有主机上同时执行 |
+| `SEQUENTIAL` | 逐台执行，失败时停止 |
+| `ROLLING` | 分批执行，可配置批次大小 |
+
+## 用户管理
+
+### 获取用户列表
+
+```http
+GET /api/users
+```
+
+<Aside>
+  仅拥有 `ADMIN` 角色的用户可以访问用户管理端点。
+</Aside>
+
+### 创建用户
+
+```http
+POST /api/users
+```
+
+```json
+{
+  "username": "operator",
+  "password": "securePassword123",
+  "role": "OPERATOR",
+  "email": "operator@example.com"
+}
+```
+
+## 响应格式
+
+所有 API 响应遵循统一格式：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": { ... }
+}
+```
+
+错误响应：
+
+```json
+{
+  "code": 400,
+  "message": "Validation failed",
+  "errors": [
+    { "field": "hostname", "message": "must not be blank" }
+  ]
+}
+```
+
+常用 HTTP 状态码：
+
+| 状态码 | 含义 |
+|--------|------|
+| 200 | 成功 |
+| 201 | 已创建 |
+| 400 | 请求错误 — 验证失败 |
+| 401 | 未授权 — 令牌缺失或无效 |
+| 403 | 禁止访问 — 权限不足 |
+| 404 | 未找到 |
+| 500 | 服务器内部错误 |

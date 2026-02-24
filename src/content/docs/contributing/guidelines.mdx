@@ -1,0 +1,155 @@
+---
+title: Contributing Guidelines
+description: How to contribute to EasyShell — code, documentation, and community guidelines.
+sidebar:
+  order: 2
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+We welcome contributions to EasyShell! Whether it's bug fixes, new features, documentation improvements, or translations, every contribution matters.
+
+## How to Contribute
+
+### 1. Find an Issue
+
+- Browse [open issues](https://github.com/easyshell-ai/easyshell/issues) on GitHub
+- Look for issues labeled `good first issue` for beginner-friendly tasks
+- Check `help wanted` for issues where we need community help
+
+### 2. Fork and Branch
+
+```bash
+# Fork the repository on GitHub, then:
+git clone https://github.com/YOUR_USERNAME/easyshell.git
+cd easyshell
+git checkout -b feature/your-feature-name
+```
+
+Branch naming conventions:
+
+| Prefix | Use Case |
+|--------|----------|
+| `feature/` | New features |
+| `fix/` | Bug fixes |
+| `docs/` | Documentation changes |
+| `refactor/` | Code refactoring |
+| `test/` | Adding or updating tests |
+
+### 3. Make Your Changes
+
+- Follow the existing code style (see [Development Setup](/contributing/development))
+- Write tests for new functionality
+- Update documentation if your change affects user-facing behavior
+
+### 4. Commit Messages
+
+Follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
+
+```
+type(scope): short description
+
+Optional longer description explaining the change.
+
+Fixes #123
+```
+
+Types:
+
+| Type | Description |
+|------|-------------|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `docs` | Documentation only |
+| `refactor` | Code change that neither fixes a bug nor adds a feature |
+| `test` | Adding or correcting tests |
+| `chore` | Build process, CI, or auxiliary tool changes |
+| `perf` | Performance improvement |
+
+Examples:
+
+```
+feat(server): add batch script execution with rolling strategy
+fix(agent): handle reconnection when server restarts
+docs: add AI configuration guide
+test(web): add unit tests for host management page
+```
+
+### 5. Submit a Pull Request
+
+1. Push your branch to your fork
+2. Open a Pull Request against `main`
+3. Fill in the PR template with:
+   - Description of what changed and why
+   - Screenshots (if UI changes)
+   - Testing steps
+   - Related issue number
+
+<Aside type="tip">
+  Keep PRs focused and small. A PR that does one thing well is easier to review than a large PR that changes many things.
+</Aside>
+
+## Code Review Process
+
+1. A maintainer will review your PR within 3 business days
+2. Address any feedback by pushing additional commits
+3. Once approved, a maintainer will merge your PR
+
+## Component-Specific Guidelines
+
+### Server (Java)
+
+- Use constructor injection (not field injection) for Spring beans
+- Write unit tests with JUnit 5 and Mockito
+- Use QueryDSL for complex database queries
+- Follow JPA best practices — avoid N+1 queries
+
+### Agent (Go)
+
+- Keep the binary small — avoid unnecessary dependencies
+- Handle all errors explicitly (no ignored error returns)
+- Write table-driven tests
+- Support graceful shutdown
+
+### Web Frontend (TypeScript)
+
+- Use functional components with hooks
+- Type all props — no `any` types
+- Use Ant Design components consistently
+- Support both English and Chinese locales
+
+### Documentation
+
+- Write in clear, concise English
+- Use code examples for every configuration option
+- Test all code examples before submitting
+- Add Chinese translations when possible
+
+## Reporting Bugs
+
+When reporting a bug, include:
+
+1. **Environment** — OS, Java/Go/Node version, browser
+2. **Steps to reproduce** — Minimal steps to trigger the bug
+3. **Expected behavior** — What should happen
+4. **Actual behavior** — What actually happens
+5. **Logs** — Relevant server/agent/browser console output
+6. **Screenshots** — If the bug is visual
+
+## Feature Requests
+
+Open a GitHub issue with the `enhancement` label. Include:
+
+- **Problem** — What problem does this solve?
+- **Proposal** — How should it work?
+- **Alternatives** — What other approaches did you consider?
+
+## Community
+
+- Be respectful and constructive in all interactions
+- Follow the [Code of Conduct](https://github.com/easyshell-ai/easyshell/blob/main/CODE_OF_CONDUCT.md)
+- Help others in issues and discussions
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the MIT License.

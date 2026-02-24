@@ -1,0 +1,208 @@
+---
+title: 开发环境搭建
+description: 搭建本地开发环境以参与 EasyShell 开发贡献。
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+## 前置条件
+
+| 工具 | 版本 | 用途 |
+|------|------|------|
+| Java | 17+ | Server 开发 |
+| Gradle | 8.x（已包含 wrapper） | Server 构建系统 |
+| Go | 1.23+ | Agent 开发 |
+| Node.js | 20+ | Web 前端开发 |
+| Docker | 24+ | 基础设施服务 |
+| Git | 2.30+ | 版本控制 |
+
+## 仓库结构
+
+```
+easyshell/
+├── easyshell-server/     # Java 17 + Spring Boot 3.5
+├── easyshell-agent/      # Go 1.23
+├── easyshell-web/        # React 19 + TypeScript + Vite 7
+├── easyshell-docs/       # Astro + Starlight（本文档站）
+├── easyshell-site/       # Next.js 15（官网 + 脚本市场）
+├── docker-compose.yml    # MySQL + Redis
+├── prd/                  # 产品需求文档
+└── spec/                 # 技术规格文档
+```
+
+## 快速开始
+
+### 1. 克隆仓库
+
+```bash
+git clone https://github.com/easyshell-ai/easyshell.git
+cd easyshell
+```
+
+### 2. 启动基础设施
+
+```bash
+docker compose up -d
+```
+
+这将启动 MySQL 8.0 和 Redis 7，使用开发默认凭据。
+
+### 3. 启动 Server
+
+<Tabs>
+  <TabItem label="IntelliJ IDEA">
+    1. 将 `easyshell-server/` 作为 Gradle 项目打开
+    2. 将 JDK 设置为 Java 17
+    3. 运行 `EasyShellServerApplication.java`
+    4. Server 将在端口 `18080` 启动
+  </TabItem>
+  <TabItem label="命令行">
+    ```bash
+    cd easyshell-server
+    ./gradlew bootRun
+    ```
+  </TabItem>
+</Tabs>
+
+Server 使用 Hibernate 自动 DDL — 首次运行时会自动创建数据库表。
+
+### 4. 启动 Web 前端
+
+```bash
+cd easyshell-web
+npm install
+npm run dev
+```
+
+前端将在 `http://localhost:5173` 启动，并启用热模块替换。
+
+### 5. 构建 Agent（可选）
+
+```bash
+cd easyshell-agent
+go build -o easyshell-agent ./cmd/agent
+```
+
+<Aside type="tip">
+  预编译的 Agent 二进制文件可在发布页面下载。只有在修改 Agent 代码时才需要自行构建。
+</Aside>
+
+## 开发工作流
+
+### Server（Java）
+
+```bash
+cd easyshell-server
+
+# 使用 dev 配置文件运行
+./gradlew bootRun --args='--spring.profiles.active=dev'
+
+# 运行测试
+./gradlew test
+
+# 构建 JAR
+./gradlew bootJar
+```
+
+主要目录：
+
+| 路径 | 内容 |
+|------|------|
+| `src/main/java/dev/easyshell/` | 应用源代码 |
+| `src/main/resources/` | 配置文件 |
+| `src/test/java/` | 测试文件 |
+
+### Agent（Go）
+
+```bash
+cd easyshell-agent
+
+# 本地运行
+go run ./cmd/agent --server http://localhost:18080
+
+# 运行测试
+go test ./...
+
+# 交叉编译
+GOOS=linux GOARCH=amd64 go build -o bin/agent-linux-amd64 ./cmd/agent
+GOOS=linux GOARCH=arm64 go build -o bin/agent-linux-arm64 ./cmd/agent
+```
+
+### Web 前端（React）
+
+```bash
+cd easyshell-web
+
+# 开发服务器（带 HMR）
+npm run dev
+
+# 类型检查
+npx tsc --noEmit
+
+# 代码检查
+npm run lint
+
+# 生产构建
+npm run build
+```
+
+### 文档站
+
+```bash
+cd easyshell-docs
+
+# 开发服务器
+pnpm dev
+
+# 构建
+pnpm build
+
+# 预览生产构建
+pnpm preview
+```
+
+## 代码规范
+
+| 组件 | 风格指南 | 工具 |
+|------|----------|------|
+| Server（Java） | Google Java Style | Checkstyle |
+| Agent（Go） | Go 标准格式 | `gofmt` / `goimports` |
+| Web（TypeScript） | ESLint + Prettier | `.eslintrc` / `.prettierrc` |
+
+## 数据库
+
+### 开发凭据
+
+| 字段 | 值 |
+|------|------|
+| 主机 | localhost |
+| 端口 | 3306 |
+| 数据库 | easyshell |
+| 用户名 | root |
+| 密码 | root |
+
+### 重置数据库
+
+```bash
+# 停止并删除 MySQL 数据卷
+docker compose down -v
+docker compose up -d
+```
+
+Server 启动时会重新创建所有表（使用 `ddl-auto: update`）。
+
+## 常用命令
+
+```bash
+# 检查所有服务是否运行
+docker compose ps
+
+# 查看服务器日志
+docker compose logs -f mysql redis
+
+# 连接到 MySQL
+docker compose exec mysql mysql -uroot -proot easyshell
+```

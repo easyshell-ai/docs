@@ -1,0 +1,11 @@
+/* EasyShell Docs - Custom Styles */
+:root {
+  --sl-color-accent-low: #1a1a2e;
+  --sl-color-accent: #4361ee;
+  --sl-color-accent-high: #c7d2fe;
+}
+:root[data-theme='dark'] {
+  --sl-color-accent-low: #c7d2fe;
+  --sl-color-accent: #818cf8;
+  --sl-color-accent-high: #1e1b4b;
+}

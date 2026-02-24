@@ -1,0 +1,104 @@
+---
+title: Docker Deployment
+description: Deploy EasyShell using Docker Compose for development and production environments.
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+Docker Compose is the recommended way to deploy EasyShell. It manages all infrastructure dependencies (MySQL, Redis) and the application services in a single configuration.
+
+## Prerequisites
+
+- **Docker** 24.0 or later
+- **Docker Compose** v2 (included with Docker Desktop)
+- At least **4 GB RAM** for the full stack
+- **10 GB** free disk space
+
+Verify your installation:
+
+```bash
+docker --version
+docker compose version
+```
+
+## Development Setup
+
+The development setup starts infrastructure services while running the application locally for fast iteration.
+
+### Start Infrastructure
+
+```bash
+git clone https://github.com/easyshell-ai/easyshell.git
+cd easyshell
+docker compose up -d
+```
+
+This starts:
+- **MySQL 8.0** on port `3306`
+- **Redis 7** on port `6379`
+
+### Verify Services
+
+```bash
+docker compose ps
+docker compose logs mysql
+docker compose logs redis
+```
+
+Both services should show `healthy` status within 30 seconds.
+
+## Production Setup
+
+For production deployments, use the production Docker Compose configuration with additional security hardening.
+
+### Environment Configuration
+
+Create a `.env` file with production values:
+
+```bash
+MYSQL_ROOT_PASSWORD=your_secure_root_password
+MYSQL_PASSWORD=your_secure_app_password
+REDIS_PASSWORD=your_secure_redis_password
+SERVER_PORT=18080
+```
+
+<Aside type="caution">
+  Never commit `.env` files to version control. Use a secrets manager for production credentials.
+</Aside>
+
+### Resource Limits
+
+The production configuration includes resource limits to prevent any single service from consuming all available resources:
+
+| Service | Memory Limit | CPU Limit |
+|---------|-------------|-----------|
+| Server | 1 GB | 2.0 |
+| MySQL | 1 GB | 1.0 |
+| Redis | 256 MB | 0.5 |
+
+### Data Persistence
+
+All data is stored in named Docker volumes:
+
+- `easyshell_mysql_data` — Database files
+- `easyshell_redis_data` — Redis AOF persistence
+
+Back up these volumes regularly in production. See the [backup guide](/configuration/security/) for automated backup scripts.
+
+## Upgrading
+
+To upgrade EasyShell to a new version:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+The server handles database migrations automatically on startup.
+
+<Aside type="tip">
+  Always back up your database before upgrading. Run `docker compose exec mysql mysqldump -u root -p easyshell > backup.sql` before pulling new images.
+</Aside>

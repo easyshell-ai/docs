@@ -1,0 +1,124 @@
+---
+title: 生产环境部署
+description: 在生产环境中部署 EasyShell 的最佳实践。
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+本指南涵盖生产环境部署注意事项，包括 Nginx 反向代理、TLS、systemd 服务和监控。
+
+## 架构
+
+典型的生产环境部署包含：
+
+```
+互联网 → Nginx (TLS) → EasyShell Server (:18080)
+                       → EasyShell Web (静态文件)
+          MySQL 8.0 ← EasyShell Server
+          Redis 7   ← EasyShell Server
+```
+
+## Nginx 反向代理
+
+配置 Nginx 提供 Web 前端静态文件并代理 API 请求到 Server：
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name easyshell.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/easyshell.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/easyshell.example.com/privkey.pem;
+
+    location / {
+        root /opt/easyshell/web/dist;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:18080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /ws/ {
+        proxy_pass http://127.0.0.1:18080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 86400;
+    }
+}
+```
+
+<Aside type="caution">
+  WebSocket 代理块（`/ws/`）需要 `proxy_http_version 1.1` 和 Upgrade 头。缺少这些配置会导致实时日志流和 Web 终端无法工作。
+</Aside>
+
+## Systemd 服务
+
+为 EasyShell Server 创建 systemd 服务文件：
+
+```ini
+[Unit]
+Description=EasyShell Server
+After=network.target mysql.service redis.service
+
+[Service]
+Type=simple
+User=easyshell
+WorkingDirectory=/opt/easyshell
+ExecStart=/usr/bin/java -jar easyshell-server.jar --server.port=18080
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment=SPRING_PROFILES_ACTIVE=production
+
+[Install]
+WantedBy=multi-user.target
+```
+
+启用并启动：
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable easyshell
+sudo systemctl start easyshell
+```
+
+## 数据库备份
+
+使用 cron 设置每日自动备份：
+
+```bash
+0 2 * * * mysqldump -u easyshell -p'密码' easyshell | gzip > /backup/easyshell-$(date +\%Y\%m\%d).sql.gz
+```
+
+至少保留 7 天的备份，并定期测试恢复。
+
+## 安全加固
+
+- 使用非 root 用户运行 Server
+- 启用 MySQL SSL 连接
+- 在生产环境中设置 Redis `requirepass`
+- 配置防火墙规则限制数据库和 Redis 端口的访问
+- 启用审计日志用于合规
+- 轮转应用日志防止磁盘耗尽
+
+## 监控
+
+监控以下端点：
+
+| 端点 | 用途 |
+|------|------|
+| `/actuator/health` | 应用健康检查 |
+| `/actuator/metrics` | Prometheus 兼容指标 |
+| `/actuator/info` | 应用版本信息 |
+
+配置监控系统（Prometheus、Grafana 等）抓取指标端点，并在服务降级时发出告警。

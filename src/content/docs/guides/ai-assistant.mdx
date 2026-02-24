@@ -1,0 +1,167 @@
+---
+title: AI Assistant
+description: Use the AI-powered operations assistant for natural language server management.
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+EasyShell's AI Operations Assistant provides a natural language interface for common server management tasks. Powered by Spring AI, it can analyze logs, generate scripts, answer questions about your infrastructure, and perform automated inspections.
+
+## Getting Started
+
+Access the AI Assistant from the sidebar → **AI Chat**. You can interact with it using natural language:
+
+```
+Check the disk usage on all production servers
+```
+
+```
+Generate a script to clean up Docker images older than 30 days
+```
+
+```
+Why is the CPU usage high on web-server-03?
+```
+
+## Capabilities
+
+### Infrastructure Queries
+
+Ask questions about your managed hosts:
+
+- "Which servers have less than 10% disk space remaining?"
+- "Show me the memory usage trend for the database cluster"
+- "List all hosts running Ubuntu 22.04"
+
+### Script Generation
+
+Describe what you need, and the AI generates a ready-to-use script:
+
+- "Write a script to rotate Nginx access logs older than 7 days"
+- "Create a health check script for PostgreSQL replication"
+- "Generate a script to update all npm packages and restart the app"
+
+Generated scripts are reviewed in the built-in editor before execution.
+
+### Log Analysis
+
+Paste or reference error logs for intelligent analysis:
+
+- "Explain this error: `ERROR 1045 (28000): Access denied for user 'root'@'localhost'`"
+- "Analyze the last 100 lines of /var/log/syslog on web-server-01"
+
+### Automated Inspections
+
+Schedule AI-powered inspections that check for:
+
+- Security vulnerabilities
+- Performance bottlenecks
+- Configuration drift
+- Resource utilization anomalies
+
+Inspection results are compiled into reports accessible from the **Inspections** page.
+
+<Aside type="tip">
+  The AI assistant has context about your registered hosts, including their OS, architecture, installed services, and recent metrics. This enables more accurate and relevant responses.
+</Aside>
+
+## Configuration
+
+Configure the AI model backend in **System Settings** → **AI Configuration**:
+
+| Setting | Description |
+|---------|-------------|
+| Provider | OpenAI, Azure OpenAI, Ollama, etc. |
+| Model | Model identifier (e.g., `gpt-4o`, `llama3`) |
+| API Key | Provider-specific API key |
+| Temperature | Response creativity (0.0–1.0) |
+| Max Tokens | Maximum response length |
+
+See the [AI Configuration](/configuration/ai-config/) guide for detailed setup instructions.
+
+## Safety
+
+All AI-generated scripts go through:
+
+1. **User Review** — Scripts are displayed in the editor for review before execution
+2. **Dangerous Command Detection** — Automatic scanning for destructive commands
+3. **Approval Workflow** — High-risk operations can require administrator approval
+4. **Audit Trail** — All AI interactions and generated scripts are logged
+
+## Available AI Tools
+
+The AI assistant has access to 26 specialized tools that enable it to interact with your infrastructure directly. These tools are automatically invoked based on your natural language requests.
+
+### Host Management
+
+| Tool | Description |
+|------|-------------|
+| `listHosts` | List all hosts with hostname, IP, OS, status, CPU/memory/disk usage |
+| `listHostsByStatus` | Filter hosts by status: 0=offline, 1=online, 2=unstable |
+| `getHostTags` | View tags assigned to a specific host |
+| `addTagToHost` | Add a tag to a host (auto-creates the tag if it doesn't exist) |
+| `removeTagFromHost` | Remove a tag from a host |
+
+### Script Execution
+
+| Tool | Description |
+|------|-------------|
+| `executeScript` | Execute a shell script on specified hosts. Scripts undergo risk assessment: low-risk executes automatically, medium/high-risk requires human approval, banned commands are rejected |
+| `listScripts` | List all scripts in the script library |
+| `getScriptDetail` | Get detailed information about a script, including full content |
+| `createScript` | Create a new script and save it to the library |
+
+### Task Management
+
+| Tool | Description |
+|------|-------------|
+| `listRecentTasks` | List recent tasks |
+| `getTaskDetail` | Get task details including per-host execution results and output |
+| `createTask` | Create and dispatch a script execution task to specified hosts |
+
+### Cluster Management
+
+| Tool | Description |
+|------|-------------|
+| `listClusters` | List all clusters |
+| `getClusterDetail` | Get detailed information about a specific cluster |
+
+### Monitoring
+
+| Tool | Description |
+|------|-------------|
+| `getDashboardStats` | Get platform overview statistics: total hosts, online/offline count, average CPU/memory usage |
+| `getHostMetrics` | Get historical monitoring metrics for a specific host |
+
+### Scheduled Inspections
+
+| Tool | Description |
+|------|-------------|
+| `listScheduledTasks` | List all scheduled inspection tasks |
+| `getInspectReports` | Get recent inspection reports |
+| `triggerScheduledTask` | Manually trigger a scheduled inspection task to execute immediately |
+
+### Approval Workflow
+
+| Tool | Description |
+|------|-------------|
+| `approveTask` | Approve a pending task for execution |
+| `rejectTask` | Reject a pending task |
+
+### Software & Audit
+
+| Tool | Description |
+|------|-------------|
+| `detectSoftware` | Detect software and services running on a specific host |
+| `queryAuditLogs` | Query operation audit logs with optional action filter |
+
+### Advanced AI
+
+| Tool | Description |
+|------|-------------|
+| `deepAnalysis` | Launch a dedicated analysis model for deep thinking on performance bottlenecks, root cause analysis, architecture optimization, etc. |
+| `scriptSafetyReview` | Review a shell script for security and correctness |
+| `delegateTask` | Delegate a task to a sub-agent for execution |
+| `getTaskResult` | Query the result of an async sub-task |

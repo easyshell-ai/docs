@@ -1,0 +1,158 @@
+---
+title: Quick Start
+description: Get EasyShell running with Docker Compose — infrastructure, server, web, and agent.
+sidebar:
+  order: 2
+  badge:
+    text: New
+    variant: tip
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+This guide walks you through setting up a complete EasyShell environment using Docker Compose for infrastructure services (MySQL + Redis), then building and running the server and web frontend.
+
+## Prerequisites
+
+- **Java 17** (JDK) — for building the server
+- **Node.js 22+** — for building the web frontend
+- **Docker 24+** with Docker Compose v2 — for MySQL and Redis
+- **Git** — for cloning the repository
+- At least **2 GB RAM** and **10 GB disk space**
+
+## Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/easyshell-ai/easyshell.git
+cd easyshell
+```
+
+## Step 2: Start Infrastructure with Docker
+
+EasyShell uses Docker Compose to run MySQL 8.0 and Redis 7:
+
+```bash
+docker compose up -d
+```
+
+Wait for both services to become healthy:
+
+```bash
+docker compose ps
+```
+
+You should see both `mysql` and `redis` with status `healthy`. This typically takes 10–30 seconds.
+
+<Aside type="tip">
+The `docker-compose.yml` exposes MySQL on port `3306` and Redis on port `6379`. Both are configured with health checks. MySQL data is persisted in a Docker volume.
+</Aside>
+
+## Step 3: Build and Start the Server
+
+```bash
+cd easyshell-server
+./gradlew bootJar
+java -jar build/libs/easyshell-server-0.1.0-SNAPSHOT.jar --server.port=18080
+```
+
+On first start, the server will:
+- Auto-create all database tables via Hibernate DDL auto
+- Create a default admin account: `admin` / `admin123`
+- Listen on port `18080`
+
+<Aside type="caution">
+Change the default admin password immediately after first login.
+</Aside>
+
+## Step 4: Build and Start the Web Frontend
+
+Open a new terminal:
+
+```bash
+cd easyshell-web
+npm install
+npm run dev
+```
+
+The web interface will be available at `http://localhost:5173`. The Vite dev server automatically proxies `/api` requests to `localhost:18080`.
+
+For production deployment, build static files and serve with Nginx:
+
+```bash
+npm run build
+# Serve the dist/ directory with Nginx or any static file server
+```
+
+## Step 5: Login
+
+Open `http://localhost:5173` in your browser and log in with:
+
+- **Username**: `admin`
+- **Password**: `admin123`
+
+## Step 6: Deploy Agents to Managed Hosts
+
+The EasyShell Agent runs on each server you want to manage. There are two ways to deploy:
+
+### Option A: Automatic Deployment (from Web UI)
+
+1. Navigate to **Host Management** in the sidebar
+2. Click **Add Host** → **Install Agent**
+3. Enter the target host's SSH credentials (IP, port, username, password/key)
+4. The server will SSH into the target, upload the correct binary (amd64/arm64), and start the agent
+
+### Option B: Manual Deployment
+
+1. Copy the pre-built binary to the target host:
+
+```bash
+scp easyshell-agent/easyshell-agent-linux-amd64 user@target:/usr/local/bin/easyshell-agent
+```
+
+2. Create the config file `/etc/easyshell/agent.yaml` on the target:
+
+```yaml
+server:
+  url: http://YOUR_EASYSHELL_SERVER:18080
+
+agent:
+  id: ""  # Leave empty to auto-generate from hostname
+
+heartbeat:
+  interval: 30  # seconds
+
+metrics:
+  interval: 60  # seconds
+
+log:
+  level: info
+```
+
+3. Start the agent:
+
+```bash
+chmod +x /usr/local/bin/easyshell-agent
+/usr/local/bin/easyshell-agent --config /etc/easyshell/agent.yaml
+```
+
+<Aside type="tip">
+Pre-built binaries for `linux-amd64` and `linux-arm64` are included in the `easyshell-agent/` directory. No Go toolchain needed unless you want to build from source.
+</Aside>
+
+## Step 7: Configure AI Assistant (Optional)
+
+To enable the AI-powered operations assistant:
+
+1. Navigate to **System Management → AI Settings**
+2. Add your preferred AI model provider (e.g., OpenAI, DeepSeek, or any OpenAI-compatible API)
+3. Configure the API Key and model settings
+4. Test the connection
+
+For detailed AI configuration, see the [AI Configuration guide](/configuration/ai-config/).
+
+## What's Next?
+
+- [Core Concepts](/getting-started/concepts/) — Understand the architecture and key terminology
+- [Host Management](/guides/host-management/) — Learn how to manage hosts and clusters
+- [Script Execution](/guides/script-execution/) — Run your first batch script
+- [AI Assistant](/guides/ai-assistant/) — Use AI for intelligent operations

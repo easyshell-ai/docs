@@ -1,0 +1,231 @@
+---
+title: 安全配置
+description: 通过身份认证、权限控制和网络安全最佳实践加固 EasyShell 部署。
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## 身份认证
+
+### 默认凭据
+
+EasyShell 附带默认管理员账户：
+
+| 字段 | 值 |
+|------|------|
+| 用户名 | `admin` |
+| 密码 | `admin123` |
+
+<Aside type="danger">
+  首次登录后请立即更改默认密码。前往 **系统设置 → 用户管理 → 编辑 admin 用户** 设置强密码。
+</Aside>
+
+### JWT 配置
+
+```yaml title="application.yml"
+easyshell:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}          # 生产环境必填
+      expiration: 86400              # 24 小时
+      refresh-expiration: 604800     # 7 天
+      issuer: easyshell
+```
+
+生成安全的 JWT 密钥：
+
+```bash
+openssl rand -base64 64
+```
+
+### 会话管理
+
+- 会话存储在 Redis 中，支持水平扩展
+- 空闲会话在配置的 JWT 过期时间后失效
+- 可在管理面板中查看和撤销活跃会话
+
+## 授权
+
+EasyShell 使用基于角色的访问控制（RBAC）：
+
+| 角色 | 权限 |
+|------|------|
+| `ADMIN` | 完全系统访问权限、用户管理、系统配置 |
+| `OPERATOR` | 执行脚本、管理主机、查看报告 |
+| `VIEWER` | 只读访问主机、脚本和执行历史 |
+
+```yaml title="application.yml"
+easyshell:
+  security:
+    default-role: VIEWER
+    allow-self-registration: false
+```
+
+## 网络安全
+
+### CORS
+
+```yaml title="application.yml"
+easyshell:
+  security:
+    cors:
+      allowed-origins:
+        - https://easyshell.ai
+        - https://your-domain.com
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+      allowed-headers:
+        - Authorization
+        - Content-Type
+      max-age: 3600
+```
+
+### 速率限制
+
+```yaml title="application.yml"
+easyshell:
+  security:
+    rate-limit:
+      enabled: true
+      requests-per-minute: 60
+      login-attempts-per-minute: 5
+      burst-size: 10
+```
+
+### HTTPS 设置
+
+<Tabs>
+  <TabItem label="Nginx 反向代理">
+    ```nginx title="nginx.conf"
+    server {
+        listen 443 ssl http2;
+        server_name easyshell.example.com;
+
+        ssl_certificate /etc/letsencrypt/live/easyshell.example.com/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/easyshell.example.com/privkey.pem;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+
+        location / {
+            proxy_pass http://127.0.0.1:5173;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location /api/ {
+            proxy_pass http://127.0.0.1:18080;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /ws/ {
+            proxy_pass http://127.0.0.1:18080;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+        }
+    }
+    ```
+  </TabItem>
+  <TabItem label="Spring Boot 内嵌">
+    ```yaml title="application.yml"
+    server:
+      ssl:
+        enabled: true
+        key-store: classpath:keystore.p12
+        key-store-password: ${SSL_KEYSTORE_PASSWORD}
+        key-store-type: PKCS12
+        key-alias: easyshell
+    ```
+  </TabItem>
+</Tabs>
+
+## Agent 安全
+
+### Agent 令牌轮换
+
+Agent 令牌应定期轮换：
+
+```bash
+# 通过 API 撤销并重新生成 Agent 令牌
+curl -X POST http://localhost:18080/api/agent/rotate-token \
+  -H "Authorization: Bearer <admin-token>" \
+  -d '{"agentId": "agent_550e8400-e29b"}'
+```
+
+### 安全的 Agent 通信
+
+在生产环境中，确保 Agent 到服务器的通信使用 TLS：
+
+```yaml title="agent.yml"
+server:
+  url: https://easyshell.example.com:18080
+  tls:
+    verify: true
+    ca-cert: /etc/easyshell/ca.pem
+```
+
+### 脚本执行隔离
+
+```yaml title="application.yml"
+easyshell:
+  execution:
+    run-as-user: easyshell           # 使用非 root 用户执行脚本
+    allowed-commands: []             # 空 = 全部允许；可按需限制
+    blocked-commands:
+      - rm -rf /
+      - mkfs
+      - dd if=/dev/zero
+    sandbox:
+      enabled: false                 # 启用严格隔离（需要 cgroups）
+      memory-limit: 512m
+      cpu-limit: 1.0
+```
+
+<Aside type="tip">
+  为获得最大安全性，建议以非 root 用户运行 Agent，并使用 `blocked-commands` 列表阻止破坏性操作。在执行不可信脚本的主机上启用沙箱模式。
+</Aside>
+
+## 审计日志
+
+所有安全相关操作都会被记录：
+
+```yaml title="application.yml"
+easyshell:
+  audit:
+    enabled: true
+    log-file: /var/log/easyshell/audit.log
+    events:
+      - LOGIN
+      - LOGOUT
+      - LOGIN_FAILED
+      - SCRIPT_EXECUTE
+      - HOST_ADD
+      - HOST_DELETE
+      - USER_CREATE
+      - USER_DELETE
+      - CONFIG_CHANGE
+```
+
+## 安全检查清单
+
+部署到生产环境前，请确认：
+
+- [ ] 已更改默认管理员密码
+- [ ] JWT 密钥已设置为强随机值
+- [ ] 已启用 HTTPS 并配置有效证书
+- [ ] CORS 来源已限制为您的域名
+- [ ] 已启用速率限制
+- [ ] Agent 令牌通信使用 TLS
+- [ ] 已启用审计日志
+- [ ] 脚本执行使用非 root 用户
+- [ ] 数据库凭据未使用默认值
+- [ ] Redis 已设置密码（如果暴露在网络中）

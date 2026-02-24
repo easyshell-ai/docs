@@ -1,0 +1,104 @@
+---
+title: Docker 部署
+description: 使用 Docker Compose 部署 EasyShell 用于开发和生产环境。
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+Docker Compose 是部署 EasyShell 的推荐方式。它通过一个配置文件管理所有基础设施依赖（MySQL、Redis）和应用服务。
+
+## 前置条件
+
+- **Docker** 24.0 或更高版本
+- **Docker Compose** v2（Docker Desktop 已内置）
+- 至少 **4 GB 内存** 用于完整技术栈
+- **10 GB** 可用磁盘空间
+
+验证安装：
+
+```bash
+docker --version
+docker compose version
+```
+
+## 开发环境
+
+开发环境启动基础设施服务，同时在本地运行应用以便快速迭代。
+
+### 启动基础设施
+
+```bash
+git clone https://github.com/easyshell-ai/easyshell.git
+cd easyshell
+docker compose up -d
+```
+
+这将启动：
+- **MySQL 8.0** 端口 `3306`
+- **Redis 7** 端口 `6379`
+
+### 验证服务
+
+```bash
+docker compose ps
+docker compose logs mysql
+docker compose logs redis
+```
+
+两个服务应在 30 秒内显示 `healthy` 状态。
+
+## 生产环境
+
+生产部署使用生产环境 Docker Compose 配置，并进行额外的安全加固。
+
+### 环境配置
+
+创建 `.env` 文件设置生产环境参数：
+
+```bash
+MYSQL_ROOT_PASSWORD=你的安全root密码
+MYSQL_PASSWORD=你的安全应用密码
+REDIS_PASSWORD=你的安全redis密码
+SERVER_PORT=18080
+```
+
+<Aside type="caution">
+  切勿将 `.env` 文件提交到版本控制。在生产环境中使用密钥管理工具管理凭据。
+</Aside>
+
+### 资源限制
+
+生产配置包含资源限制，防止任何单个服务消耗所有可用资源：
+
+| 服务 | 内存限制 | CPU 限制 |
+|------|---------|---------|
+| Server | 1 GB | 2.0 |
+| MySQL | 1 GB | 1.0 |
+| Redis | 256 MB | 0.5 |
+
+### 数据持久化
+
+所有数据存储在命名的 Docker 卷中：
+
+- `easyshell_mysql_data` —— 数据库文件
+- `easyshell_redis_data` —— Redis AOF 持久化
+
+在生产环境中定期备份这些卷。查看[安全配置](/configuration/security/)了解自动备份脚本。
+
+## 升级
+
+升级 EasyShell 到新版本：
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Server 在启动时自动处理数据库迁移。
+
+<Aside type="tip">
+  升级前务必备份数据库。在拉取新镜像之前运行 `docker compose exec mysql mysqldump -u root -p easyshell > backup.sql`。
+</Aside>

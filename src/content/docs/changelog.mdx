@@ -1,0 +1,81 @@
+---
+title: Changelog
+description: Release history and version notes for EasyShell.
+sidebar:
+  order: 100
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+All notable changes to EasyShell are documented here. This project follows [Semantic Versioning](https://semver.org/).
+
+## v0.2.0 (Upcoming)
+
+### Added
+- **Cloud Script Marketplace** — Browse, share, and download community scripts at [easyshell.ai](https://easyshell.ai)
+- **Script compatibility metadata** — Scripts now declare supported OS, kernel versions, and CPU architectures
+- **Script versioning** — Publish and track multiple versions of a script
+- **GitHub OAuth login** — Sign in with GitHub to publish and review scripts
+- **Documentation site** — Standalone docs at [docs.easyshell.ai](https://docs.easyshell.ai)
+
+### Improved
+- Enhanced script execution with rolling deployment strategy
+- Better error messages for agent connection failures
+- Improved web terminal reconnection handling
+
+---
+
+## v0.1.0 (Initial Release)
+
+### Core Platform
+- **Server** — Java 17 + Spring Boot 3.5.10 central management server
+- **Agent** — Go 1.23 lightweight agent with zero runtime dependencies
+- **Web UI** — React 19 + TypeScript + Vite 7 frontend with Ant Design 6
+
+### Infrastructure Management
+- Host registration (manual and auto-discovery via agent)
+- Host detail view with system info and resource metrics
+- Cluster grouping for organizing related hosts
+- Tag-based host organization
+
+### Script Execution
+- Script library with CRUD management
+- Batch script execution across multiple hosts
+- Real-time log streaming via WebSocket
+- Execution history with status tracking
+- Configurable execution timeout
+- Support for Bash, Python, and PowerShell scripts
+
+### Web Terminal
+- Browser-based SSH terminal via WebSocket
+- Multi-tab terminal sessions
+- Terminal resize support
+- Copy/paste support
+
+### AI Intelligence
+- AI chat assistant powered by Spring AI
+- Support for OpenAI, Azure OpenAI, and OpenAI-compatible providers
+- Scheduled host inspections with automated reports
+- Operation approval workflow for destructive commands
+- SOP (Standard Operating Procedure) management
+- Vector store for AI memory and context retrieval
+
+### Administration
+- Role-based access control (Admin, Operator, Viewer)
+- User management
+- System configuration UI
+- AI model settings
+- Audit logging
+
+### Platform Features
+- Internationalization (English and Chinese)
+- Dark and light theme
+- Responsive design
+- Agent heartbeat monitoring (30-second intervals)
+- Resource metrics collection (60-second intervals)
+
+### Communication Protocol
+- HTTP REST API for routine operations
+- WebSocket for real-time log streaming and terminal
+- Agent registration with token-based authentication
+- Automatic reconnection with exponential backoff

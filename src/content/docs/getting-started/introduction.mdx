@@ -1,0 +1,46 @@
+---
+title: Introduction
+description: Learn what EasyShell is and how it simplifies server management and operations.
+sidebar:
+  order: 1
+---
+
+EasyShell is a lightweight server management and intelligent operations platform designed for DevOps engineers, system administrators, and SREs who need to manage fleets of servers efficiently.
+
+## What is EasyShell?
+
+EasyShell provides a centralized web interface to manage, monitor, and operate servers at scale. It uses a **Server-Agent architecture** where a central management server coordinates lightweight agents deployed on target hosts.
+
+The platform combines traditional operations tools with modern AI capabilities, enabling both manual and AI-assisted server management workflows.
+
+## Key Features
+
+- **Host Management** — Register, organize, and monitor servers with real-time health metrics and cluster grouping
+- **Batch Script Execution** — Execute shell scripts across multiple hosts simultaneously with parameter templates and scheduling
+- **Real-time Log Streaming** — WebSocket-based live log output with full-text search and filtering
+- **AI Operations Assistant** — Natural language interface for common operations tasks, powered by Spring AI
+- **Web Terminal** — Browser-based interactive SSH terminal, no client software needed
+- **Security Controls** — Dangerous command interception, approval workflows, and comprehensive audit trails
+
+## Architecture Overview
+
+EasyShell consists of three main components:
+
+| Component | Technology | Role |
+|-----------|-----------|------|
+| **Server** | Java 17 + Spring Boot 3.5 | Central management, API, business logic |
+| **Agent** | Go 1.23 | Lightweight host-side agent, script execution |
+| **Web** | React 19 + Vite 7 + Ant Design 6 | Web frontend, dashboards, terminal |
+
+The server communicates with agents via HTTP for registration and heartbeats, and WebSocket for real-time script execution and log streaming.
+
+## Who is EasyShell For?
+
+- **DevOps Engineers** managing infrastructure across multiple environments
+- **System Administrators** who need batch operations capabilities
+- **SREs** looking for an integrated operations platform with AI assistance
+- **Small to Medium Teams** that want a self-hosted, open-source alternative to commercial operations platforms
+
+## Next Steps
+
+Ready to get started? Head to the [Quick Start](/getting-started/quick-start/) guide to have EasyShell running in 5 minutes.

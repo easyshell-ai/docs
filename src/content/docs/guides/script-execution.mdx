@@ -1,0 +1,95 @@
+---
+title: Script Execution
+description: Execute shell scripts across multiple hosts with real-time log streaming.
+sidebar:
+  order: 2
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Script execution is EasyShell's core capability. You can run scripts on individual hosts, clusters, or custom host selections with real-time output streaming.
+
+## Creating Scripts
+
+Navigate to **Script Library** → **Create Script** to write a new script:
+
+1. **Name** — A descriptive name for the script
+2. **Type** — Shell type (Bash, Python, etc.)
+3. **Content** — The script body, edited in the built-in Monaco code editor
+4. **Parameters** — Define input variables that are resolved at execution time
+5. **Category** — Classify the script (monitoring, deployment, maintenance, etc.)
+
+### Script Parameters
+
+Scripts support parameterized variables using the `{{variable_name}}` syntax:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+echo "Deploying version {{version}} to {{environment}}"
+cd /opt/{{app_name}}
+git checkout {{version}}
+systemctl restart {{app_name}}
+```
+
+When executing, users are prompted to fill in each parameter value.
+
+## Running Scripts
+
+### Single Host Execution
+
+1. Navigate to a host's detail page
+2. Click **Execute Script**
+3. Select a script from the library or enter ad-hoc commands
+4. Fill in any parameters
+5. Click **Execute**
+
+### Batch Execution
+
+1. Go to **Script Library** → select a script
+2. Click **Batch Execute**
+3. Choose target hosts (by selection, cluster, or tag filter)
+4. Configure execution settings:
+   - **Concurrency** — Maximum parallel executions (default: 10)
+   - **Timeout** — Per-host execution timeout (default: 300s)
+   - **Stop on Error** — Whether to halt remaining hosts on failure
+5. Click **Execute**
+
+## Real-time Log Streaming
+
+During execution, EasyShell streams script output in real-time via WebSocket:
+
+- **Live Output** — See stdout and stderr as they happen
+- **Per-Host View** — Switch between individual host outputs in batch mode
+- **Search** — Full-text search across log output
+- **Download** — Export complete logs after execution
+
+<Aside type="tip">
+  For long-running scripts, the WebSocket connection automatically reconnects if interrupted. You can navigate away and return to see the full output history.
+</Aside>
+
+## Execution History
+
+All executions are recorded with:
+
+| Field | Description |
+|-------|-------------|
+| Script | Name and version of the executed script |
+| Target | Host(s) or cluster |
+| Status | Success, Failed, Timeout, Cancelled |
+| Duration | Wall-clock execution time |
+| Exit Code | Process exit code per host |
+| Executor | User who initiated the execution |
+| Timestamp | Start and end times |
+
+Access execution history from the **Tasks** page or from individual host detail pages.
+
+## Scheduled Execution
+
+Scripts can be scheduled for recurring execution:
+
+1. Select a script → **Schedule**
+2. Configure the cron expression (e.g., `0 2 * * *` for daily at 2 AM)
+3. Select target hosts
+4. Enable/disable notifications on failure

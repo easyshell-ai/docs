@@ -1,0 +1,158 @@
+---
+title: 快速开始
+description: 使用 Docker Compose 搭建 EasyShell —— 基础设施、服务端、前端和 Agent 全流程。
+sidebar:
+  order: 2
+  badge:
+    text: 新
+    variant: tip
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+本指南将带你使用 Docker Compose 搭建完整的 EasyShell 环境，包括基础设施服务（MySQL + Redis）、服务端和 Web 前端。
+
+## 前置条件
+
+- **Java 17**（JDK）—— 用于构建服务端
+- **Node.js 22+** —— 用于构建 Web 前端
+- **Docker 24+** 并安装 Docker Compose v2 —— 用于运行 MySQL 和 Redis
+- **Git** —— 用于克隆仓库
+- 至少 **2 GB 内存** 和 **10 GB 磁盘空间**
+
+## 第一步：克隆仓库
+
+```bash
+git clone https://github.com/easyshell-ai/easyshell.git
+cd easyshell
+```
+
+## 第二步：使用 Docker 启动基础设施
+
+EasyShell 使用 Docker Compose 运行 MySQL 8.0 和 Redis 7：
+
+```bash
+docker compose up -d
+```
+
+等待服务健康就绪：
+
+```bash
+docker compose ps
+```
+
+你应该看到 `mysql` 和 `redis` 的状态都显示 `healthy`，通常需要 10–30 秒。
+
+<Aside type="tip">
+`docker-compose.yml` 将 MySQL 暴露在端口 `3306`，Redis 暴露在端口 `6379`。两个服务都配置了健康检查，MySQL 数据持久化在 Docker 卷中。
+</Aside>
+
+## 第三步：构建并启动服务端
+
+```bash
+cd easyshell-server
+./gradlew bootJar
+java -jar build/libs/easyshell-server-0.1.0-SNAPSHOT.jar --server.port=18080
+```
+
+首次启动时，服务端会：
+- 通过 Hibernate DDL 自动创建所有数据库表
+- 创建默认管理员账号：`admin` / `admin123`
+- 监听端口 `18080`
+
+<Aside type="caution">
+请在首次登录后立即修改默认管理员密码。
+</Aside>
+
+## 第四步：构建并启动 Web 前端
+
+打开一个新终端：
+
+```bash
+cd easyshell-web
+npm install
+npm run dev
+```
+
+Web 界面将在 `http://localhost:5173` 可用。Vite 开发服务器会自动将 `/api` 请求代理到 `localhost:18080`。
+
+生产环境部署时，构建静态文件并使用 Nginx 托管：
+
+```bash
+npm run build
+# 使用 Nginx 或其他静态文件服务器托管 dist/ 目录
+```
+
+## 第五步：登录
+
+打开浏览器访问 `http://localhost:5173`，使用以下账号登录：
+
+- **用户名**：`admin`
+- **密码**：`admin123`
+
+## 第六步：部署 Agent 到被管理主机
+
+EasyShell Agent 运行在每台需要管理的服务器上。有两种部署方式：
+
+### 方式一：自动部署（通过 Web 界面）
+
+1. 在侧边栏导航到 **主机管理**
+2. 点击 **添加主机** → **安装 Agent**
+3. 输入目标主机的 SSH 凭据（IP、端口、用户名、密码/密钥）
+4. 服务端将自动 SSH 到目标主机，上传对应的二进制文件（amd64/arm64），并启动 Agent
+
+### 方式二：手动部署
+
+1. 将预编译的二进制文件复制到目标主机：
+
+```bash
+scp easyshell-agent/easyshell-agent-linux-amd64 user@target:/usr/local/bin/easyshell-agent
+```
+
+2. 在目标主机上创建配置文件 `/etc/easyshell/agent.yaml`：
+
+```yaml
+server:
+  url: http://你的EasyShell服务器地址:18080
+
+agent:
+  id: ""  # 留空则根据主机名自动生成
+
+heartbeat:
+  interval: 30  # 秒
+
+metrics:
+  interval: 60  # 秒
+
+log:
+  level: info
+```
+
+3. 启动 Agent：
+
+```bash
+chmod +x /usr/local/bin/easyshell-agent
+/usr/local/bin/easyshell-agent --config /etc/easyshell/agent.yaml
+```
+
+<Aside type="tip">
+`easyshell-agent/` 目录中已包含 `linux-amd64` 和 `linux-arm64` 的预编译二进制文件，无需安装 Go 工具链即可使用。
+</Aside>
+
+## 第七步：配置 AI 助手（可选）
+
+启用 AI 智能运维助手：
+
+1. 进入 **系统管理 → AI 设置**
+2. 添加你的 AI 模型提供商（如 OpenAI、DeepSeek 或任何 OpenAI 兼容的 API）
+3. 配置 API Key 和模型参数
+4. 测试连接
+
+详细的 AI 配置说明请参阅 [AI 配置指南](/zh-cn/configuration/ai-config/)。
+
+## 接下来
+
+- [核心概念](/zh-cn/getting-started/concepts/) —— 了解架构和关键术语
+- [主机管理](/zh-cn/guides/host-management/) —— 学习如何管理主机和集群
+- [脚本执行](/zh-cn/guides/script-execution/) —— 运行第一个批量脚本
+- [AI 助手](/zh-cn/guides/ai-assistant/) —— 使用 AI 进行智能运维
