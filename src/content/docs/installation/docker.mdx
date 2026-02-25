@@ -8,7 +8,7 @@ sidebar:
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 import { Aside } from '@astrojs/starlight/components';
 
-Docker Compose is the recommended way to deploy EasyShell. It manages all infrastructure dependencies (MySQL, Redis) and the application services in a single configuration.
+Docker Compose is the recommended way to deploy EasyShell. All services (Server, Web, MySQL, Redis) are fully containerized — pre-built images are automatically published to GHCR and Docker Hub via GitHub Actions.
 
 ## Prerequisites
 
@@ -24,58 +24,107 @@ docker --version
 docker compose version
 ```
 
-## Development Setup
-
-The development setup starts infrastructure services while running the application locally for fast iteration.
-
-### Start Infrastructure
+## Quick Deploy
 
 ```bash
 git clone https://github.com/easyshell-ai/easyshell.git
 cd easyshell
+cp .env.example .env      # Edit if needed
 docker compose up -d
 ```
 
-This starts:
-- **MySQL 8.0** on port `3306`
-- **Redis 7** on port `6379`
+No local build required — pre-built images are pulled automatically from [GHCR](https://github.com/orgs/easyshell-ai/packages).
 
-### Verify Services
+Open `http://localhost:18880` → login with `easyshell` / `easyshell@changeme`.
+
+## Service Architecture
+
+`docker-compose.yml` defines all four services:
+
+| Service | Image | Port | Description |
+|---------|-------|------|-------------|
+| **easyshell-server** | `ghcr.io/.../easyshell-server:latest` | `18080` | Java Spring Boot backend + built-in Agent binaries |
+| **easyshell-web** | `ghcr.io/.../easyshell-web:latest` | `18880` | React frontend (served by Nginx) |
+| **easyshell-mysql** | `mysql:8.0` | `13306` | Database |
+| **easyshell-redis** | `redis:7-alpine` | `16379` | Cache |
+
+Service dependencies: `web → server → mysql + redis`. Docker Compose uses health checks to ensure correct startup order.
+
+## Environment Configuration
+
+`.env.example` contains all configurable options. Copy it to `.env` and modify:
 
 ```bash
-docker compose ps
-docker compose logs mysql
-docker compose logs redis
-```
+# MySQL
+MYSQL_PASSWORD=18923ce29fdab04e
+MYSQL_DATABASE=easyshell
+MYSQL_PORT=13306
 
-Both services should show `healthy` status within 30 seconds.
+# Redis
+REDIS_PORT=16379
 
-## Production Setup
-
-For production deployments, use the production Docker Compose configuration with additional security hardening.
-
-### Environment Configuration
-
-Create a `.env` file with production values:
-
-```bash
-MYSQL_ROOT_PASSWORD=your_secure_root_password
-MYSQL_PASSWORD=your_secure_app_password
-REDIS_PASSWORD=your_secure_redis_password
+# Server
 SERVER_PORT=18080
+JAVA_OPTS=-Xms256m -Xmx512m
+
+# Agent connection URL (change to your server's external IP when deploying agents)
+# PROVISION_SERVER_URL=http://your-server-ip:18080
+
+# Web
+WEB_PORT=18880
+
+# Security (MUST change in production!)
+# JWT_SECRET=your-production-jwt-secret-key-must-be-at-least-64-characters-long-change-me
+# ENCRYPTION_KEY=your-production-aes256-key!!
+
+# Docker image source (default: GHCR; uncomment to use Docker Hub)
+# EASYSHELL_SERVER_IMAGE=laolupaojiao/easyshell-server:latest
+# EASYSHELL_WEB_IMAGE=laolupaojiao/easyshell-web:latest
 ```
 
 <Aside type="caution">
-  Never commit `.env` files to version control. Use a secrets manager for production credentials.
+  Never commit `.env` files to version control. Always change `MYSQL_PASSWORD`, `JWT_SECRET`, and `ENCRYPTION_KEY` for production.
 </Aside>
+
+## Verify Services
+
+```bash
+docker compose ps
+docker compose logs easyshell-server
+docker compose logs easyshell-web
+```
+
+All services should show `healthy` status within 1–2 minutes.
+
+## Development Setup
+
+To build from source (for development and debugging), use the development compose file:
+
+```bash
+docker compose -f docker-compose.build.yml up -d
+```
+
+This builds images locally using `Dockerfile.server` and `Dockerfile.web` instead of pulling pre-built images.
+
+## Production Setup
+
+### Security Hardening
+
+Required configuration for production deployments:
+
+1. **Change all default passwords** — `MYSQL_PASSWORD`, `JWT_SECRET`, `ENCRYPTION_KEY`
+2. **Set `PROVISION_SERVER_URL`** — change to your server's externally reachable address
+3. **Restrict port exposure** — MySQL (`13306`) and Redis (`16379`) ports are for debugging only; restrict via firewall or remove port mappings in production
+4. **Configure reverse proxy** — use Nginx for TLS termination. See [Production Deployment](/installation/production/)
 
 ### Resource Limits
 
-The production configuration includes resource limits to prevent any single service from consuming all available resources:
+Recommended resource limits for production:
 
 | Service | Memory Limit | CPU Limit |
 |---------|-------------|-----------|
 | Server | 1 GB | 2.0 |
+| Web | 256 MB | 0.5 |
 | MySQL | 1 GB | 1.0 |
 | Redis | 256 MB | 0.5 |
 
@@ -100,5 +149,5 @@ docker compose up -d
 The server handles database migrations automatically on startup.
 
 <Aside type="tip">
-  Always back up your database before upgrading. Run `docker compose exec mysql mysqldump -u root -p easyshell > backup.sql` before pulling new images.
+  Always back up your database before upgrading. Run `docker compose exec easyshell-mysql mysqldump -u root -p easyshell > backup.sql` before pulling new images.
 </Aside>

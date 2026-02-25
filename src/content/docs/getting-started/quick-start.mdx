@@ -1,6 +1,6 @@
 ---
 title: Quick Start
-description: Get EasyShell running with Docker Compose — infrastructure, server, web, and agent.
+description: Deploy EasyShell with Docker Compose — no local build required, ready out of the box.
 sidebar:
   order: 2
   badge:
@@ -10,15 +10,17 @@ sidebar:
 
 import { Aside } from '@astrojs/starlight/components';
 
-This guide walks you through setting up a complete EasyShell environment using Docker Compose for infrastructure services (MySQL + Redis), then building and running the server and web frontend.
+This guide walks you through deploying a complete EasyShell environment with Docker Compose. All services (Server, Web, MySQL, Redis) are fully containerized — pre-built images are automatically published to [GHCR](https://github.com/orgs/easyshell-ai/packages) and Docker Hub via GitHub Actions.
 
 ## Prerequisites
 
-- **Java 17** (JDK) — for building the server
-- **Node.js 22+** — for building the web frontend
-- **Docker 24+** with Docker Compose v2 — for MySQL and Redis
+- **Docker 24+** with Docker Compose v2 (included with Docker Desktop)
 - **Git** — for cloning the repository
 - At least **2 GB RAM** and **10 GB disk space**
+
+<Aside type="tip">
+No need to install Java, Node.js, or Go — all components are provided as Docker images.
+</Aside>
 
 ## Step 1: Clone the Repository
 
@@ -27,68 +29,72 @@ git clone https://github.com/easyshell-ai/easyshell.git
 cd easyshell
 ```
 
-## Step 2: Start Infrastructure with Docker
+## Step 2: Configure Environment Variables
 
-EasyShell uses Docker Compose to run MySQL 8.0 and Redis 7:
+Copy the environment template and modify as needed:
+
+```bash
+cp .env.example .env
+```
+
+The defaults work out of the box. Key configuration options:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MYSQL_PASSWORD` | `18923ce29fdab04e` | MySQL root password |
+| `SERVER_PORT` | `18080` | Server API port |
+| `WEB_PORT` | `18880` | Web frontend port |
+| `PROVISION_SERVER_URL` | `http://easyshell-server:18080` | Agent connection URL — change to your server's external address when deploying agents |
+
+<Aside type="caution">
+For production, always change `MYSQL_PASSWORD`, `JWT_SECRET`, and `ENCRYPTION_KEY`. Never commit `.env` files to version control.
+</Aside>
+
+## Step 3: Start All Services
 
 ```bash
 docker compose up -d
 ```
 
-Wait for both services to become healthy:
+Docker Compose will automatically pull pre-built images and start all four services:
+
+| Service | Image | Port |
+|---------|-------|------|
+| **easyshell-server** | `ghcr.io/easyshell-ai/easyshell/easyshell-server:latest` | `18080` |
+| **easyshell-web** | `ghcr.io/easyshell-ai/easyshell/easyshell-web:latest` | `18880` |
+| **easyshell-mysql** | `mysql:8.0` | `13306` |
+| **easyshell-redis** | `redis:7-alpine` | `16379` |
+
+<Aside type="tip">
+To use Docker Hub instead of GHCR, set in `.env`:
+```
+EASYSHELL_SERVER_IMAGE=laolupaojiao/easyshell-server:latest
+EASYSHELL_WEB_IMAGE=laolupaojiao/easyshell-web:latest
+```
+</Aside>
+
+## Step 4: Verify Services
 
 ```bash
 docker compose ps
 ```
 
-You should see both `mysql` and `redis` with status `healthy`. This typically takes 10–30 seconds.
-
-<Aside type="tip">
-The `docker-compose.yml` exposes MySQL on port `3306` and Redis on port `6379`. Both are configured with health checks. MySQL data is persisted in a Docker volume.
-</Aside>
-
-## Step 3: Build and Start the Server
+All services should show `healthy` status within 1–2 minutes. You can also check logs for troubleshooting:
 
 ```bash
-cd easyshell-server
-./gradlew bootJar
-java -jar build/libs/easyshell-server-0.1.0-SNAPSHOT.jar --server.port=18080
-```
-
-On first start, the server will:
-- Auto-create all database tables via Hibernate DDL auto
-- Create a default admin account: `admin` / `admin123`
-- Listen on port `18080`
-
-<Aside type="caution">
-Change the default admin password immediately after first login.
-</Aside>
-
-## Step 4: Build and Start the Web Frontend
-
-Open a new terminal:
-
-```bash
-cd easyshell-web
-npm install
-npm run dev
-```
-
-The web interface will be available at `http://localhost:5173`. The Vite dev server automatically proxies `/api` requests to `localhost:18080`.
-
-For production deployment, build static files and serve with Nginx:
-
-```bash
-npm run build
-# Serve the dist/ directory with Nginx or any static file server
+docker compose logs -f
 ```
 
 ## Step 5: Login
 
-Open `http://localhost:5173` in your browser and log in with:
+Open `http://localhost:18880` in your browser and log in with:
 
-- **Username**: `admin`
-- **Password**: `admin123`
+- **Username**: `easyshell`
+- **Password**: `easyshell@changeme`
+
+<Aside type="caution">
+Change the default password immediately after first login.
+</Aside>
 
 ## Step 6: Deploy Agents to Managed Hosts
 
@@ -100,6 +106,10 @@ The EasyShell Agent runs on each server you want to manage. There are two ways t
 2. Click **Add Host** → **Install Agent**
 3. Enter the target host's SSH credentials (IP, port, username, password/key)
 4. The server will SSH into the target, upload the correct binary (amd64/arm64), and start the agent
+
+<Aside type="tip">
+Before using automatic deployment, make sure `PROVISION_SERVER_URL` in your `.env` is set to the server's externally reachable address (e.g. `http://your-server-ip:18080`) — agents need this URL to connect back to the server.
+</Aside>
 
 ### Option B: Manual Deployment
 
@@ -149,6 +159,16 @@ To enable the AI-powered operations assistant:
 4. Test the connection
 
 For detailed AI configuration, see the [AI Configuration guide](/configuration/ai-config/).
+
+## Developer: Build from Source
+
+To build images locally from source instead of using pre-built images, use the development compose file:
+
+```bash
+docker compose -f docker-compose.build.yml up -d
+```
+
+This will build images locally using `Dockerfile.server` and `Dockerfile.web` before starting.
 
 ## What's Next?
 

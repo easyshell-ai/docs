@@ -20,24 +20,34 @@ The EasyShell Agent is a lightweight Go binary that runs on each managed host. I
 
 ## Installation
 
-### Pre-built Binaries
+### Automatic Deployment (Recommended)
 
-Download the latest agent binary for your platform:
+The easiest way to deploy agents is through the EasyShell web interface:
 
-<Tabs>
-  <TabItem label="Linux amd64">
-    ```bash
-    curl -fsSL https://github.com/easyshell-ai/easyshell/releases/latest/download/easyshell-agent-linux-amd64 -o /usr/local/bin/easyshell-agent
-    chmod +x /usr/local/bin/easyshell-agent
-    ```
-  </TabItem>
-  <TabItem label="Linux arm64">
-    ```bash
-    curl -fsSL https://github.com/easyshell-ai/easyshell/releases/latest/download/easyshell-agent-linux-arm64 -o /usr/local/bin/easyshell-agent
-    chmod +x /usr/local/bin/easyshell-agent
-    ```
-  </TabItem>
-</Tabs>
+1. Go to **Host Management** → **Add Host**
+2. Select **Automatic Deployment**
+3. Enter the target host's SSH credentials (IP, port, username, password/key)
+4. The server will SSH into the target, upload the correct binary (amd64/arm64), and start the agent
+
+<Aside type="tip">
+  Before using automatic deployment, ensure `PROVISION_SERVER_URL` in your `.env` is set to the server's externally reachable address (e.g., `http://your-server-ip:18080`).
+</Aside>
+
+### Extract from Docker Image
+
+Agent binaries are bundled inside the server Docker image. You can extract them:
+
+```bash
+# Extract amd64 binary
+docker cp $(docker create --rm ghcr.io/easyshell-ai/easyshell/easyshell-server:latest):/opt/easyshell/agent-binaries/easyshell-agent-linux-amd64 ./easyshell-agent
+chmod +x ./easyshell-agent
+```
+
+### Pre-built Binaries (GitHub Releases)
+
+<Aside type="caution">
+  GitHub Releases are not yet available. For now, use automatic deployment via the web UI or extract binaries from the Docker image.
+</Aside>
 
 ### Build from Source
 
@@ -45,6 +55,8 @@ Download the latest agent binary for your platform:
 cd easyshell-agent
 GOOS=linux GOARCH=amd64 go build -o easyshell-agent-linux-amd64 ./cmd/agent
 ```
+
+Requires Go 1.24+.
 
 ## Configuration
 

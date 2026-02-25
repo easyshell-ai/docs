@@ -29,8 +29,13 @@ All notable changes to EasyShell are documented here. This project follows [Sema
 
 ### Core Platform
 - **Server** — Java 17 + Spring Boot 3.5.10 central management server
-- **Agent** — Go 1.23 lightweight agent with zero runtime dependencies
+- **Agent** — Go 1.24 lightweight agent with zero runtime dependencies
 - **Web UI** — React 19 + TypeScript + Vite 7 frontend with Ant Design 6
+
+### CI/CD & Distribution
+- **Docker image publishing** — GitHub Actions workflow builds and pushes multi-platform (amd64/arm64) images to GHCR and Docker Hub on tagged releases
+- **Pre-built images** — `docker compose up -d` pulls ready-to-use images with no local build required
+- **Image registries** — Available on GHCR (`ghcr.io/easyshell-ai/easyshell/`) and Docker Hub (`laolupaojiao/`)
 
 ### Infrastructure Management
 - Host registration (manual and auto-discovery via agent)

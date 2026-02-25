@@ -14,8 +14,8 @@ import { Aside } from '@astrojs/starlight/components';
 典型的生产环境部署包含：
 
 ```
-互联网 → Nginx (TLS) → EasyShell Server (:18080)
-                       → EasyShell Web (静态文件)
+互联网 → Nginx (TLS) → EasyShell Web (:18880)
+                       → EasyShell Server (:18080)
           MySQL 8.0 ← EasyShell Server
           Redis 7   ← EasyShell Server
 ```
@@ -33,8 +33,8 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/easyshell.example.com/privkey.pem;
 
     location / {
-        root /opt/easyshell/web/dist;
-        try_files $uri $uri/ /index.html;
+        proxy_pass http://127.0.0.1:18880;
+        proxy_set_header Host $host;
     }
 
     location /api/ {
@@ -60,25 +60,26 @@ server {
   WebSocket 代理块（`/ws/`）需要 `proxy_http_version 1.1` 和 Upgrade 头。缺少这些配置会导致实时日志流和 Web 终端无法工作。
 </Aside>
 
+<Aside type="tip">
+  使用 Docker Compose 部署时，Web 和 Server 容器会处理内部路由。Nginx 只需代理到暴露的端口（`18880` 为 Web，`18080` 为 API/WebSocket）。
+</Aside>
+
 ## Systemd 服务
 
-为 EasyShell Server 创建 systemd 服务文件：
+如果你使用 Docker Compose 运行 EasyShell（推荐），创建一个 systemd 单元来管理 Compose 栈：
 
 ```ini
 [Unit]
-Description=EasyShell Server
-After=network.target mysql.service redis.service
+Description=EasyShell (Docker Compose)
+After=docker.service
+Requires=docker.service
 
 [Service]
-Type=simple
-User=easyshell
+Type=oneshot
+RemainAfterExit=yes
 WorkingDirectory=/opt/easyshell
-ExecStart=/usr/bin/java -jar easyshell-server.jar --server.port=18080
-Restart=on-failure
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-Environment=SPRING_PROFILES_ACTIVE=production
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
 
 [Install]
 WantedBy=multi-user.target
@@ -91,6 +92,11 @@ sudo systemctl daemon-reload
 sudo systemctl enable easyshell
 sudo systemctl start easyshell
 ```
+
+<Aside type="tip">
+  如需裸机（非 Docker）部署，请使用标准 Java 服务单元。参见[手动安装](/zh-cn/installation/manual/)指南。
+</Aside>
+
 
 ## 数据库备份
 

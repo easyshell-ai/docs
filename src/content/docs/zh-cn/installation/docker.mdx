@@ -1,6 +1,6 @@
 ---
 title: Docker 部署
-description: 使用 Docker Compose 部署 EasyShell 用于开发和生产环境。
+description: 使用 Docker Compose 一键部署 EasyShell，涵盖开发与生产环境。
 sidebar:
   order: 1
 ---
@@ -8,7 +8,7 @@ sidebar:
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 import { Aside } from '@astrojs/starlight/components';
 
-Docker Compose 是部署 EasyShell 的推荐方式。它通过一个配置文件管理所有基础设施依赖（MySQL、Redis）和应用服务。
+Docker Compose 是部署 EasyShell 的推荐方式。所有服务（Server、Web、MySQL、Redis）均已完整容器化，预构建镜像通过 GitHub Actions 自动发布到 GHCR 和 Docker Hub。
 
 ## 前置条件
 
@@ -24,58 +24,107 @@ docker --version
 docker compose version
 ```
 
-## 开发环境
-
-开发环境启动基础设施服务，同时在本地运行应用以便快速迭代。
-
-### 启动基础设施
+## 快速部署
 
 ```bash
 git clone https://github.com/easyshell-ai/easyshell.git
 cd easyshell
+cp .env.example .env      # 按需修改
 docker compose up -d
 ```
 
-这将启动：
-- **MySQL 8.0** 端口 `3306`
-- **Redis 7** 端口 `6379`
+无需本地构建 —— 预构建镜像会自动从 [GHCR](https://github.com/orgs/easyshell-ai/packages) 拉取。
 
-### 验证服务
+访问 `http://localhost:18880`，使用 `easyshell` / `easyshell@changeme` 登录。
+
+## 服务架构
+
+`docker-compose.yml` 定义了以下四个服务：
+
+| 服务 | 镜像 | 端口 | 说明 |
+|------|------|------|------|
+| **easyshell-server** | `ghcr.io/.../easyshell-server:latest` | `18080` | Java Spring Boot 后端 + 内置 Agent 二进制 |
+| **easyshell-web** | `ghcr.io/.../easyshell-web:latest` | `18880` | React 前端（Nginx 托管） |
+| **easyshell-mysql** | `mysql:8.0` | `13306` | 数据库 |
+| **easyshell-redis** | `redis:7-alpine` | `16379` | 缓存 |
+
+服务间依赖关系：`web → server → mysql + redis`，Docker Compose 通过健康检查确保启动顺序。
+
+## 环境配置
+
+`.env.example` 包含所有可配置项，复制为 `.env` 后修改：
 
 ```bash
-docker compose ps
-docker compose logs mysql
-docker compose logs redis
-```
+# MySQL
+MYSQL_PASSWORD=18923ce29fdab04e
+MYSQL_DATABASE=easyshell
+MYSQL_PORT=13306
 
-两个服务应在 30 秒内显示 `healthy` 状态。
+# Redis
+REDIS_PORT=16379
 
-## 生产环境
-
-生产部署使用生产环境 Docker Compose 配置，并进行额外的安全加固。
-
-### 环境配置
-
-创建 `.env` 文件设置生产环境参数：
-
-```bash
-MYSQL_ROOT_PASSWORD=你的安全root密码
-MYSQL_PASSWORD=你的安全应用密码
-REDIS_PASSWORD=你的安全redis密码
+# Server
 SERVER_PORT=18080
+JAVA_OPTS=-Xms256m -Xmx512m
+
+# Agent 连接地址（部署 Agent 时改为服务器外部可达 IP）
+# PROVISION_SERVER_URL=http://your-server-ip:18080
+
+# Web
+WEB_PORT=18880
+
+# 安全配置（生产环境务必修改！）
+# JWT_SECRET=your-production-jwt-secret-key-must-be-at-least-64-characters-long-change-me
+# ENCRYPTION_KEY=your-production-aes256-key!!
+
+# Docker 镜像源（默认 GHCR，取消注释切换到 Docker Hub）
+# EASYSHELL_SERVER_IMAGE=laolupaojiao/easyshell-server:latest
+# EASYSHELL_WEB_IMAGE=laolupaojiao/easyshell-web:latest
 ```
 
 <Aside type="caution">
-  切勿将 `.env` 文件提交到版本控制。在生产环境中使用密钥管理工具管理凭据。
+  切勿将 `.env` 文件提交到版本控制。在生产环境中务必修改 `MYSQL_PASSWORD`、`JWT_SECRET` 和 `ENCRYPTION_KEY`。
 </Aside>
+
+## 验证服务
+
+```bash
+docker compose ps
+docker compose logs easyshell-server
+docker compose logs easyshell-web
+```
+
+所有服务应在 1–2 分钟内显示 `healthy` 状态。
+
+## 开发环境
+
+如需从源码构建（用于开发调试），使用开发配置文件：
+
+```bash
+docker compose -f docker-compose.build.yml up -d
+```
+
+这将使用本地的 `Dockerfile.server` 和 `Dockerfile.web` 构建镜像，而非拉取远程预构建镜像。
+
+## 生产环境
+
+### 安全加固
+
+生产部署时的必要配置：
+
+1. **修改所有默认密码** —— `MYSQL_PASSWORD`、`JWT_SECRET`、`ENCRYPTION_KEY`
+2. **设置 `PROVISION_SERVER_URL`** —— 改为服务器外部可达地址
+3. **限制端口暴露** —— MySQL（`13306`）和 Redis（`16379`）端口仅供调试使用，生产环境建议通过防火墙限制访问或移除端口映射
+4. **配置反向代理** —— 使用 Nginx 提供 TLS 终止，参见[生产环境部署](/zh-cn/installation/production/)
 
 ### 资源限制
 
-生产配置包含资源限制，防止任何单个服务消耗所有可用资源：
+生产环境建议的资源配置：
 
 | 服务 | 内存限制 | CPU 限制 |
 |------|---------|---------|
 | Server | 1 GB | 2.0 |
+| Web | 256 MB | 0.5 |
 | MySQL | 1 GB | 1.0 |
 | Redis | 256 MB | 0.5 |
 
@@ -86,7 +135,7 @@ SERVER_PORT=18080
 - `easyshell_mysql_data` —— 数据库文件
 - `easyshell_redis_data` —— Redis AOF 持久化
 
-在生产环境中定期备份这些卷。查看[安全配置](/configuration/security/)了解自动备份脚本。
+在生产环境中定期备份这些卷。查看[安全配置](/zh-cn/configuration/security/)了解自动备份脚本。
 
 ## 升级
 
@@ -100,5 +149,5 @@ docker compose up -d
 Server 在启动时自动处理数据库迁移。
 
 <Aside type="tip">
-  升级前务必备份数据库。在拉取新镜像之前运行 `docker compose exec mysql mysqldump -u root -p easyshell > backup.sql`。
+  升级前务必备份数据库。运行 `docker compose exec easyshell-mysql mysqldump -u root -p easyshell > backup.sql` 后再拉取新镜像。
 </Aside>

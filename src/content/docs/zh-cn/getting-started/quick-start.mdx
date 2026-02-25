@@ -1,6 +1,6 @@
 ---
 title: 快速开始
-description: 使用 Docker Compose 搭建 EasyShell —— 基础设施、服务端、前端和 Agent 全流程。
+description: 使用 Docker Compose 一键部署 EasyShell —— 无需本地构建，开箱即用。
 sidebar:
   order: 2
   badge:
@@ -10,15 +10,17 @@ sidebar:
 
 import { Aside } from '@astrojs/starlight/components';
 
-本指南将带你使用 Docker Compose 搭建完整的 EasyShell 环境，包括基础设施服务（MySQL + Redis）、服务端和 Web 前端。
+本指南将带你使用 Docker Compose 一键部署完整的 EasyShell 环境。所有服务（Server、Web、MySQL、Redis）均已容器化，预构建镜像通过 GitHub Actions 自动发布到 [GHCR](https://github.com/orgs/easyshell-ai/packages) 和 Docker Hub。
 
 ## 前置条件
 
-- **Java 17**（JDK）—— 用于构建服务端
-- **Node.js 22+** —— 用于构建 Web 前端
-- **Docker 24+** 并安装 Docker Compose v2 —— 用于运行 MySQL 和 Redis
+- **Docker 24+** 并安装 Docker Compose v2（Docker Desktop 已内置）
 - **Git** —— 用于克隆仓库
 - 至少 **2 GB 内存** 和 **10 GB 磁盘空间**
+
+<Aside type="tip">
+无需安装 Java、Node.js 或 Go —— 所有组件均通过 Docker 镜像提供。
+</Aside>
 
 ## 第一步：克隆仓库
 
@@ -27,68 +29,72 @@ git clone https://github.com/easyshell-ai/easyshell.git
 cd easyshell
 ```
 
-## 第二步：使用 Docker 启动基础设施
+## 第二步：配置环境变量
 
-EasyShell 使用 Docker Compose 运行 MySQL 8.0 和 Redis 7：
+复制环境变量模板并根据需要修改：
+
+```bash
+cp .env.example .env
+```
+
+默认配置即可直接使用，关键配置项如下：
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `MYSQL_PASSWORD` | `18923ce29fdab04e` | MySQL root 密码 |
+| `SERVER_PORT` | `18080` | Server API 端口 |
+| `WEB_PORT` | `18880` | Web 前端端口 |
+| `PROVISION_SERVER_URL` | `http://easyshell-server:18080` | Agent 连接地址，部署 Agent 时需改为服务器外部可达地址 |
+
+<Aside type="caution">
+生产环境中请务必修改 `MYSQL_PASSWORD`、`JWT_SECRET` 和 `ENCRYPTION_KEY`。切勿将 `.env` 文件提交到版本控制。
+</Aside>
+
+## 第三步：一键启动所有服务
 
 ```bash
 docker compose up -d
 ```
 
-等待服务健康就绪：
+Docker Compose 将自动拉取预构建镜像并启动以下四个服务：
+
+| 服务 | 镜像 | 端口 |
+|------|------|------|
+| **easyshell-server** | `ghcr.io/easyshell-ai/easyshell/easyshell-server:latest` | `18080` |
+| **easyshell-web** | `ghcr.io/easyshell-ai/easyshell/easyshell-web:latest` | `18880` |
+| **easyshell-mysql** | `mysql:8.0` | `13306` |
+| **easyshell-redis** | `redis:7-alpine` | `16379` |
+
+<Aside type="tip">
+如需使用 Docker Hub 镜像源，在 `.env` 中设置：
+```
+EASYSHELL_SERVER_IMAGE=laolupaojiao/easyshell-server:latest
+EASYSHELL_WEB_IMAGE=laolupaojiao/easyshell-web:latest
+```
+</Aside>
+
+## 第四步：验证服务状态
 
 ```bash
 docker compose ps
 ```
 
-你应该看到 `mysql` 和 `redis` 的状态都显示 `healthy`，通常需要 10–30 秒。
-
-<Aside type="tip">
-`docker-compose.yml` 将 MySQL 暴露在端口 `3306`，Redis 暴露在端口 `6379`。两个服务都配置了健康检查，MySQL 数据持久化在 Docker 卷中。
-</Aside>
-
-## 第三步：构建并启动服务端
+所有服务应在 1–2 分钟内显示 `healthy` 状态。也可以查看日志排查问题：
 
 ```bash
-cd easyshell-server
-./gradlew bootJar
-java -jar build/libs/easyshell-server-0.1.0-SNAPSHOT.jar --server.port=18080
-```
-
-首次启动时，服务端会：
-- 通过 Hibernate DDL 自动创建所有数据库表
-- 创建默认管理员账号：`admin` / `admin123`
-- 监听端口 `18080`
-
-<Aside type="caution">
-请在首次登录后立即修改默认管理员密码。
-</Aside>
-
-## 第四步：构建并启动 Web 前端
-
-打开一个新终端：
-
-```bash
-cd easyshell-web
-npm install
-npm run dev
-```
-
-Web 界面将在 `http://localhost:5173` 可用。Vite 开发服务器会自动将 `/api` 请求代理到 `localhost:18080`。
-
-生产环境部署时，构建静态文件并使用 Nginx 托管：
-
-```bash
-npm run build
-# 使用 Nginx 或其他静态文件服务器托管 dist/ 目录
+docker compose logs -f
 ```
 
 ## 第五步：登录
 
-打开浏览器访问 `http://localhost:5173`，使用以下账号登录：
+打开浏览器访问 `http://localhost:18880`，使用以下账号登录：
 
-- **用户名**：`admin`
-- **密码**：`admin123`
+- **用户名**：`easyshell`
+- **密码**：`easyshell@changeme`
+
+<Aside type="caution">
+请在首次登录后立即修改默认密码。
+</Aside>
 
 ## 第六步：部署 Agent 到被管理主机
 
@@ -100,6 +106,10 @@ EasyShell Agent 运行在每台需要管理的服务器上。有两种部署方�
 2. 点击 **添加主机** → **安装 Agent**
 3. 输入目标主机的 SSH 凭据（IP、端口、用户名、密码/密钥）
 4. 服务端将自动 SSH 到目标主机，上传对应的二进制文件（amd64/arm64），并启动 Agent
+
+<Aside type="tip">
+使用自动部署前，请确保 `.env` 中的 `PROVISION_SERVER_URL` 已设置为服务器的外部可达地址（如 `http://your-server-ip:18080`），Agent 需要通过此地址连接到 Server。
+</Aside>
 
 ### 方式二：手动部署
 
@@ -149,6 +159,16 @@ chmod +x /usr/local/bin/easyshell-agent
 4. 测试连接
 
 详细的 AI 配置说明请参阅 [AI 配置指南](/zh-cn/configuration/ai-config/)。
+
+## 开发者：从源码构建
+
+如需从源码构建镜像（而非使用预构建镜像），使用开发配置文件：
+
+```bash
+docker compose -f docker-compose.build.yml up -d
+```
+
+这将使用本地的 `Dockerfile.server` 和 `Dockerfile.web` 在本地构建镜像后启动。
 
 ## 接下来
 
