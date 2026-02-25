@@ -39,7 +39,7 @@ Agent 二进制文件已内置在 Server Docker 镜像中，可以直接提取�
 
 ```bash
 # 提取 amd64 二进制文件
-docker cp $(docker create --rm ghcr.io/easyshell-ai/easyshell/easyshell-server:latest):/opt/easyshell/agent-binaries/easyshell-agent-linux-amd64 ./easyshell-agent
+docker cp $(docker create --rm laolupaojiao/easyshell-server:latest):/opt/easyshell/agent-binaries/easyshell-agent-linux-amd64 ./easyshell-agent
 chmod +x ./easyshell-agent
 ```
 

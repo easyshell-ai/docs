@@ -8,7 +8,7 @@ sidebar:
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 import { Aside } from '@astrojs/starlight/components';
 
-Docker Compose 是部署 EasyShell 的推荐方式。所有服务（Server、Web、MySQL、Redis）均已完整容器化，预构建镜像通过 GitHub Actions 自动发布到 GHCR 和 Docker Hub。
+Docker Compose 是部署 EasyShell 的推荐方式。所有服务（Server、Web、MySQL、Redis）均已完整容器化，预构建镜像通过 GitHub Actions 自动发布到 Docker Hub 和 GHCR。
 
 ## 前置条件
 
@@ -33,7 +33,7 @@ cp .env.example .env      # 按需修改
 docker compose up -d
 ```
 
-无需本地构建 —— 预构建镜像会自动从 [GHCR](https://github.com/orgs/easyshell-ai/packages) 拉取。
+无需本地构建 —— 预构建镜像会自动从 [Docker Hub](https://hub.docker.com/u/laolupaojiao) 拉取。
 
 访问 `http://localhost:18880`，使用 `easyshell` / `easyshell@changeme` 登录。
 
@@ -43,8 +43,8 @@ docker compose up -d
 
 | 服务 | 镜像 | 端口 | 说明 |
 |------|------|------|------|
-| **easyshell-server** | `ghcr.io/.../easyshell-server:latest` | `18080` | Java Spring Boot 后端 + 内置 Agent 二进制 |
-| **easyshell-web** | `ghcr.io/.../easyshell-web:latest` | `18880` | React 前端（Nginx 托管） |
+| **easyshell-server** | `laolupaojiao/easyshell-server:latest` | `18080` | Java Spring Boot 后端 + 内置 Agent 二进制 |
+| **easyshell-web** | `laolupaojiao/easyshell-web:latest` | `18880` | React 前端（Nginx 托管） |
 | **easyshell-mysql** | `mysql:8.0` | `13306` | 数据库 |
 | **easyshell-redis** | `redis:7-alpine` | `16379` | 缓存 |
 
@@ -77,9 +77,9 @@ WEB_PORT=18880
 # JWT_SECRET=your-production-jwt-secret-key-must-be-at-least-64-characters-long-change-me
 # ENCRYPTION_KEY=your-production-aes256-key!!
 
-# Docker 镜像源（默认 GHCR，取消注释切换到 Docker Hub）
-# EASYSHELL_SERVER_IMAGE=laolupaojiao/easyshell-server:latest
-# EASYSHELL_WEB_IMAGE=laolupaojiao/easyshell-web:latest
+# Docker 镜像源（默认 Docker Hub，取消注释切换到 GHCR）
+# EASYSHELL_SERVER_IMAGE=ghcr.io/easyshell-ai/easyshell/easyshell-server:latest
+# EASYSHELL_WEB_IMAGE=ghcr.io/easyshell-ai/easyshell/easyshell-web:latest
 ```
 
 <Aside type="caution">

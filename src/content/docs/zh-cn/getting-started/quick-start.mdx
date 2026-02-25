@@ -10,7 +10,7 @@ sidebar:
 
 import { Aside } from '@astrojs/starlight/components';
 
-本指南将带你使用 Docker Compose 一键部署完整的 EasyShell 环境。所有服务（Server、Web、MySQL、Redis）均已容器化，预构建镜像通过 GitHub Actions 自动发布到 [GHCR](https://github.com/orgs/easyshell-ai/packages) 和 Docker Hub。
+本指南将带你使用 Docker Compose 一键部署完整的 EasyShell 环境。所有服务（Server、Web、MySQL、Redis）均已容器化，预构建镜像通过 GitHub Actions 自动发布到 [Docker Hub](https://hub.docker.com/u/laolupaojiao) 和 GHCR。
 
 ## 前置条件
 
@@ -60,16 +60,16 @@ Docker Compose 将自动拉取预构建镜像并启动以下四个服务：
 
 | 服务 | 镜像 | 端口 |
 |------|------|------|
-| **easyshell-server** | `ghcr.io/easyshell-ai/easyshell/easyshell-server:latest` | `18080` |
-| **easyshell-web** | `ghcr.io/easyshell-ai/easyshell/easyshell-web:latest` | `18880` |
+| **easyshell-server** | `laolupaojiao/easyshell-server:latest` | `18080` |
+| **easyshell-web** | `laolupaojiao/easyshell-web:latest` | `18880` |
 | **easyshell-mysql** | `mysql:8.0` | `13306` |
 | **easyshell-redis** | `redis:7-alpine` | `16379` |
 
 <Aside type="tip">
-如需使用 Docker Hub 镜像源，在 `.env` 中设置：
+如需使用 GHCR 镜像源，在 `.env` 中设置：
 ```
-EASYSHELL_SERVER_IMAGE=laolupaojiao/easyshell-server:latest
-EASYSHELL_WEB_IMAGE=laolupaojiao/easyshell-web:latest
+EASYSHELL_SERVER_IMAGE=ghcr.io/easyshell-ai/easyshell/easyshell-server:latest
+EASYSHELL_WEB_IMAGE=ghcr.io/easyshell-ai/easyshell/easyshell-web:latest
 ```
 </Aside>
 

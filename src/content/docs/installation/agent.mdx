@@ -39,7 +39,7 @@ Agent binaries are bundled inside the server Docker image. You can extract them:
 
 ```bash
 # Extract amd64 binary
-docker cp $(docker create --rm ghcr.io/easyshell-ai/easyshell/easyshell-server:latest):/opt/easyshell/agent-binaries/easyshell-agent-linux-amd64 ./easyshell-agent
+docker cp $(docker create --rm laolupaojiao/easyshell-server:latest):/opt/easyshell/agent-binaries/easyshell-agent-linux-amd64 ./easyshell-agent
 chmod +x ./easyshell-agent
 ```
 
