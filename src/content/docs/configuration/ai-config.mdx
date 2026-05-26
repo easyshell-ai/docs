@@ -40,6 +40,36 @@ EasyShell integrates AI capabilities through Spring AI, supporting multiple mode
                 temperature: 0.3
     ```
   </TabItem>
+  <TabItem label="DeepSeek">
+    ```yaml title="application.yml"
+    spring:
+      ai:
+        openai:
+          api-key: ${DEEPSEEK_API_KEY}
+          base-url: https://api.deepseek.com
+          chat:
+            options:
+              model: deepseek-chat
+              temperature: 0.3
+    ```
+  </TabItem>
+  <TabItem label="GitHub Copilot">
+    ```yaml title="application.yml"
+    spring:
+      ai:
+        openai:
+          api-key: ${GITHUB_COPILOT_TOKEN}
+          base-url: https://api.githubcopilot.com
+          chat:
+            options:
+              model: gpt-4o
+              temperature: 0.3
+    ```
+
+    <Aside type="caution">
+      GitHub Copilot uses short-lived tokens that expire after approximately 30 minutes. EasyShell automatically handles token refresh and retry on 401 errors.
+    </Aside>
+  </TabItem>
   <TabItem label="Custom / Self-hosted">
     ```yaml title="application.yml"
     spring:

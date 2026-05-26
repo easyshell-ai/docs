@@ -7,7 +7,7 @@ sidebar:
 
 import { Aside } from '@astrojs/starlight/components';
 
-EasyShell's AI Operations Assistant provides a natural language interface for common server management tasks. Powered by Spring AI, it can analyze logs, generate scripts, answer questions about your infrastructure, and perform automated inspections.
+EasyShell's AI Operations Assistant provides a natural language interface for common server management tasks. Powered by Spring AI, it can analyze logs, generate scripts, answer questions about your infrastructure, perform automated inspections, and supports DAG workflow orchestration and the AI Script Workbench.
 
 ## Getting Started
 
@@ -52,6 +52,15 @@ Paste or reference error logs for intelligent analysis:
 - "Explain this error: `ERROR 1045 (28000): Access denied for user 'root'@'localhost'`"
 - "Analyze the last 100 lines of /var/log/syslog on web-server-01"
 
+### AI Script Workbench
+
+The AI Script Workbench provides a full-page AI-assisted script authoring environment:
+
+- Describe your needs in natural language, and the AI generates executable scripts
+- Built-in CodeMirror editor with syntax highlighting
+- Script safety review and risk assessment
+- Save directly to the script library or execute on target hosts
+
 ### Automated Inspections
 
 Schedule AI-powered inspections that check for:
@@ -92,7 +101,7 @@ All AI-generated scripts go through:
 
 ## Available AI Tools
 
-The AI assistant has access to 26 specialized tools that enable it to interact with your infrastructure directly. These tools are automatically invoked based on your natural language requests.
+The AI assistant has access to 26 specialized tools that enable it to interact with your infrastructure directly. These tools are automatically invoked based on your natural language requests. Tools support DAG (directed acyclic graph) workflow orchestration, enabling chained multi-tool execution.
 
 ### Host Management
 

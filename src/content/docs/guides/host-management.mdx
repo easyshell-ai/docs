@@ -19,6 +19,14 @@ Enter the host details manually:
 - **Authentication** — Password or SSH key
 - **Tags** — Key-value pairs for organizing hosts (e.g., `env:production`, `role:web`)
 
+### Batch Import
+
+Bulk import hosts via CSV file:
+1. Download the CSV template
+2. Fill in host information (hostname, IP, port, authentication, etc.)
+3. Upload the CSV file to create hosts in bulk
+4. After import, optionally choose **Batch Deploy** to automatically deploy Agent to the imported hosts
+
 ### Auto-Discovery via Agent
 
 If the agent is already deployed on the target host, it will automatically register with the server. The agent sends a registration request containing:

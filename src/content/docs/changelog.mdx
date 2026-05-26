@@ -9,26 +9,126 @@ import { Aside } from '@astrojs/starlight/components';
 
 All notable changes to EasyShell are documented here. This project follows [Semantic Versioning](https://semver.org/).
 
-## v0.2.0 (Upcoming)
+## v1.0.5
 
 ### Added
-- **Cloud Script Marketplace** — Browse, share, and download community scripts at [easyshell.ai](https://easyshell.ai)
-- **Script compatibility metadata** — Scripts now declare supported OS, kernel versions, and CPU architectures
-- **Script versioning** — Publish and track multiple versions of a script
-- **GitHub OAuth login** — Sign in with GitHub to publish and review scripts
-- **Documentation site** — Standalone docs at [docs.easyshell.ai](https://docs.easyshell.ai)
+- **Feishu (Lark) bot channel** — Supports both Webhook and Stream modes
+- **Slack bot channel** — Receives messages via Events API, supports Bot Token for in-channel replies
+- **WeCom (WeChat Work) bot channel** — Webhook push messaging to group chats
+- **DingTalk Stream mode** — WebSocket-based message receiving, no public IP required
+- **Feishu Stream mode** — WebSocket-based message receiving, no public IP required
+- **Standalone bot configuration page** — Bot channel settings moved out of AI Settings into a dedicated management interface
+- **Dynamic scheduled task channels** — Scheduled inspections and script tasks can push results to selected bot channels
+
+---
+
+## v1.0.0
+
+### Major
+- **AI-native operations platform** — Full upgrade to an AI-driven intelligent operations platform
+- **README rewrite** — Completely rewritten project documentation highlighting AI-native positioning
+- Editor resize fixes
+- Version bump to 1.0.0
+
+---
+
+## v0.2.5
+
+### Added
+- **AI Script Workbench** — Full-page AI-assisted script authoring workbench
+- **Task CodeMirror editor** — Task details now use CodeMirror instead of plain text
+
+### Fixed
+- Fix dispatchJob transaction race condition
+
+---
+
+## v0.2.4
+
+### Fixed
+- **GitHub Copilot 401 fix** — Fix short-lived Copilot token expiring after ~30 minutes; ChatModelFactory bypasses cache for github-copilot provider; OrchestratorEngine adds 401-aware retry with token refresh
+- **403 redirect to login** — Frontend interceptors handle 403 (Spring Security default for expired JWT); both axios and fetch handlers redirect to /login on 401/403
+- **Text selection visibility** — Fix ::selection white-on-white in AI chat
+- **Task timeout handling** — Transaction race fix: dispatch WebSocket after DB commit; timeout watchdog: auto-fail jobs running >5 min; WebSocket disconnect: auto-fail running jobs for disconnected agents
+- **Copy button** — Copy button checkmark feedback, added common.copied i18n
+- **Agent panic recovery** — Go agent executeJob() with panic recovery and enhanced logging
+
+---
+
+## v0.2.3
+
+### Fixed
+- Exponential backoff for task polling
+- Copy button fallback for HTTP environments
+- Text selection visibility fix in AI chat
+- i18n for configuration descriptions
+
+---
+
+## v0.2.2
+
+### Added
+- **Web terminal file manager** — Browse, upload, and download files in the web terminal
+- **File transfer progress** — Progress bar for file upload/download operations
+- **Split timeout strategy** — Improved task execution timeout handling
+- Agent version bump to 0.2.2
+
+---
+
+## v0.2.0
+
+### Added
+- **AI module overhaul** — Complete rewrite of the AI module with architecture improvements
+- **10 utility tools** — AI assistant gains 10 new infrastructure management tools
+- **DAG workflows** — Support for directed acyclic graph workflow orchestration
 
 ### Improved
-- Enhanced script execution with rolling deployment strategy
-- Better error messages for agent connection failures
-- Improved web terminal reconnection handling
+- Frontend UI fixes and optimizations
+
+---
+
+## v0.1.3
+
+### Added
+- **AI-driven notification decisions** — AI decides whether to send notifications based on custom criteria
+- **Cron picker upgrade** — Improved cron expression picker component
+- **Header external links** — External links added to the page header
+
+---
+
+## v0.1.2
+
+### Added
+- **Host batch import** — Bulk import hosts via CSV file
+- **Batch deploy** — Auto-deploy agents after CSV import
+- **SSH key authentication** — Host connections support SSH key auth
+- **Unified host list** — Consolidated host management view
+
+### Fixed
+- Fix @Async self-invocation in batch deploy
+- Fix credential status preservation during uninstall flow
+- Fix host action button agentId check priority
+- Fix template download 403 error
+
+---
+
+## v0.1.1
+
+### Fixed
+- **Scheduled task stuck fix** — Fix scheduled tasks remaining in running status
+- **HTTP timeout improvements** — HTTP request timeout and retry strategy enhancements
+
+### Added
+- Scheduled task bot push notifications
+- Refresh models button for all AI provider tabs
+- Async message handling optimization for Telegram and Discord bot polling
 
 ---
 
 ## v0.1.0 (Initial Release)
 
 ### Core Platform
-- **Server** — Java 17 + Spring Boot 3.5.10 central management server
+- **Server** — Java 17 + Spring Boot 3.5 central management server
 - **Agent** — Go 1.24 lightweight agent with zero runtime dependencies
 - **Web UI** — React 19 + TypeScript + Vite 7 frontend with Ant Design 6
 

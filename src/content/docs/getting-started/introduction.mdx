@@ -15,13 +15,14 @@ The platform combines traditional operations tools with modern AI capabilities, 
 
 ## Key Features
 
-- **Host Management** — Register, organize, and monitor servers with real-time health metrics and cluster grouping
+- **Host Management** — Register, organize, and monitor servers with real-time health metrics, cluster grouping, batch import, and SSH key authentication
 - **Batch Script Execution** — Execute shell scripts across multiple hosts simultaneously with parameter templates and scheduling
 - **Real-time Log Streaming** — WebSocket-based live log output with full-text search and filtering
-- **AI Operations Assistant** — Natural language interface for common operations tasks, powered by Spring AI
-- **Web Terminal** — Browser-based interactive SSH terminal, no client software needed
+- **AI Operations Assistant** — Natural language interface for common operations tasks, powered by Spring AI, with DAG workflow orchestration
+- **AI Script Workbench** — Full-page AI-assisted script authoring workbench
+- **Web Terminal** — Browser-based interactive SSH terminal with built-in file manager and file upload/download
+- **Bot Channels** — Interact with the AI assistant through Telegram, Discord, DingTalk, Feishu, Slack, or WeCom
 - **Security Controls** — Dangerous command interception, approval workflows, and comprehensive audit trails
-
 ## Architecture Overview
 
 EasyShell consists of three main components:
@@ -29,7 +30,7 @@ EasyShell consists of three main components:
 | Component | Technology | Role |
 |-----------|-----------|------|
 | **Server** | Java 17 + Spring Boot 3.5 | Central management, API, business logic |
-| **Agent** | Go 1.23 | Lightweight host-side agent, script execution |
+| **Agent** | Go 1.24 | Lightweight host-side agent, script execution |
 | **Web** | React 19 + Vite 7 + Ant Design 6 | Web frontend, dashboards, terminal |
 
 The server communicates with agents via HTTP for registration and heartbeats, and WebSocket for real-time script execution and log streaming.

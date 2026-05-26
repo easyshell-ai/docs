@@ -1,6 +1,6 @@
 ---
 title: Bot Channels
-description: Configure Telegram, Discord, and DingTalk bot channels for AI assistant interaction.
+description: Configure Telegram, Discord, DingTalk, Feishu, Slack, and WeCom bot channels for AI assistant interaction.
 sidebar:
   order: 4
 ---
@@ -8,7 +8,24 @@ sidebar:
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 import { Aside } from '@astrojs/starlight/components';
 
-EasyShell supports multiple messaging channels that connect to the AI assistant, allowing your team to interact with EasyShell through Telegram, Discord, or DingTalk.
+EasyShell supports multiple messaging channels that connect to the AI assistant, allowing your team to interact with EasyShell through Telegram, Discord, DingTalk, Feishu (Lark), Slack, or WeCom (WeChat Work).
+
+<Aside type="note">
+Bot channel configuration has been moved to a standalone page. You can now manage all channels in **System Management → Bot Configuration**.
+</Aside>
+
+## Channel Overview
+
+| Channel | Mode | Public IP Required | Notes |
+|---------|------|-------------------|-------|
+| Telegram | Long Polling | No | Auto-polling, no server exposure needed |
+| Discord | REST Polling | No | Polls every 2 seconds |
+| DingTalk | Webhook / **Stream** | Webhook: Yes / Stream: **No** | Stream uses WebSocket, no public IP |
+| Feishu | Webhook / **Stream** | Webhook: Yes / Stream: **No** | Stream uses WebSocket, no public IP |
+| Slack | Webhook | Yes | Receives messages via Events API |
+| WeCom | Webhook | No | Push-only to group chats |
+
+---
 
 ## Telegram Bot
 
@@ -39,7 +56,7 @@ Search for **@userinfobot** in Telegram and send any message to get your Chat ID
 
 ### 3. Configure in EasyShell
 
-1. Navigate to **System Management → AI Settings → Message Channels → Telegram**
+1. Navigate to **System Management → Bot Configuration → Telegram**
 2. Fill in the configuration:
 
 | Field | Description | Required |
@@ -87,7 +104,7 @@ Telegram uses **Long Polling** mode — no public IP or HTTPS certificate requir
 
 ### 4. Configure in EasyShell
 
-1. Navigate to **System Management → AI Settings → Message Channels → Discord**
+1. Navigate to **System Management → Bot Configuration → Discord**
 2. Fill in the configuration:
 
 | Field | Description | Required |
@@ -105,6 +122,42 @@ Discord uses **REST polling** mode (every 2 seconds) — no public IP required. 
 ---
 
 ## DingTalk Bot
+
+DingTalk bot supports two modes: **Webhook mode** and **Stream mode**.
+
+<Tabs>
+<TabItem label="Stream Mode (Recommended)">
+
+Stream mode uses a WebSocket long-lived connection to receive messages — **no public IP or HTTPS certificate required**. This is the recommended approach.
+
+### 1. Create an Enterprise Internal App
+
+1. Log in to the [DingTalk Open Platform](https://open-dev.dingtalk.com)
+2. Create an enterprise internal app → Add **Bot** capability
+3. In the app's **Credentials & Basic Info**, obtain the **Client ID** (AppKey) and **Client Secret** (AppSecret)
+
+### 2. Configure in EasyShell
+
+1. Navigate to **System Management → Bot Configuration → DingTalk**
+2. Switch mode to **Stream**
+3. Fill in the configuration:
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| Mode | Select **Stream** | Yes |
+| Client ID | App's AppKey | Yes |
+| Client Secret | App's AppSecret | Yes |
+
+4. Toggle **Enable** on
+
+<Aside type="tip">
+In Stream mode, EasyShell connects outbound to DingTalk servers via WebSocket — no public callback URL needed. Disconnections are handled with automatic exponential backoff reconnection.
+</Aside>
+
+</TabItem>
+<TabItem label="Webhook Mode">
+
+Webhook mode requires your server to have a publicly accessible HTTPS address.
 
 ### 1. Create a DingTalk Custom Bot
 
@@ -136,28 +189,176 @@ Custom group bots only support **pushing** messages to groups via Webhook URL �
 
 ### 3. Configure in EasyShell
 
-1. Navigate to **System Management → AI Settings → Message Channels → DingTalk**
+1. Navigate to **System Management → Bot Configuration → DingTalk**
+2. Switch mode to **Webhook**
+3. Fill in the configuration:
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| Mode | Select **Webhook** | Yes |
+| Webhook URL | DingTalk Webhook URL | Yes |
+| Secret | Signing key (starts with `SEC`) | Recommended |
+
+4. Toggle **Enable** on
+
+<Aside type="tip">
+Signature verification uses HmacSHA256. If you only need to push messages to DingTalk groups (no receiving), just configure the Webhook URL.
+</Aside>
+
+</TabItem>
+</Tabs>
+
+---
+
+## Feishu (Lark) Bot
+
+Feishu bot supports both **Webhook mode** and **Stream mode**.
+
+<Tabs>
+<TabItem label="Stream Mode (Recommended)">
+
+Stream mode uses a WebSocket long-lived connection to receive messages — **no public IP or HTTPS certificate required**.
+
+### 1. Create a Feishu App
+
+1. Log in to the [Feishu Open Platform](https://open.feishu.cn/app)
+2. Create an enterprise self-built app
+3. Add **Bot** capability
+4. In **Credentials & Basic Info**, obtain the **App ID** and **App Secret**
+5. In **Events & Callbacks → Event Configuration**, select **Long Connection** mode
+6. Subscribe to events: `im.message.receive_v1` (receive messages)
+
+### 2. Configure in EasyShell
+
+1. Navigate to **System Management → Bot Configuration → Feishu**
+2. Switch mode to **Stream**
+3. Fill in the configuration:
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| Mode | Select **Stream** | Yes |
+| App ID | Feishu app's App ID | Yes |
+| App Secret | Feishu app's App Secret | Yes |
+
+4. Toggle **Enable** on
+
+<Aside type="tip">
+In Stream mode, EasyShell connects outbound to Feishu servers via WebSocket. Replies are sent via the Feishu Reply API. Disconnections are handled with automatic reconnection.
+</Aside>
+
+</TabItem>
+<TabItem label="Webhook Mode">
+
+Webhook mode requires your server to have a publicly accessible HTTPS address.
+
+### 1. Create a Feishu App
+
+1. Log in to the [Feishu Open Platform](https://open.feishu.cn/app)
+2. Create an enterprise self-built app → Add **Bot** capability
+3. In **Credentials & Basic Info**, obtain the **App Secret** (for signature verification)
+4. In **Events & Callbacks**, set the request URL:
+   ```
+   https://<your-server-domain>:<port>/api/v1/webhook/feishu
+   ```
+5. Feishu will send a `url_verification` request — EasyShell handles this automatically
+6. Subscribe to events: `im.message.receive_v1` (receive messages)
+
+### 2. Get Webhook URL (Push Messages)
+
+To push messages to Feishu groups:
+1. In Feishu group settings, add a **Custom Bot**
+2. Copy the generated **Webhook URL**
+3. Optionally enable **Signature Verification** and obtain the key
+
+### 3. Configure in EasyShell
+
+1. Navigate to **System Management → Bot Configuration → Feishu**
+2. Switch mode to **Webhook**
+3. Fill in the configuration:
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| Mode | Select **Webhook** | Yes |
+| Webhook URL | Feishu Webhook URL (for push messages) | Optional |
+| Secret | Signing key (HMAC-SHA256 verification) | Recommended |
+
+4. Toggle **Enable** on
+
+</TabItem>
+</Tabs>
+
+---
+
+## Slack Bot
+
+### 1. Create a Slack App
+
+1. Visit [Slack API](https://api.slack.com/apps) and click **Create New App**
+2. Choose **From scratch**, enter the app name and select a workspace
+3. Under **Event Subscriptions**, enable events
+4. Set the request URL:
+   ```
+   https://<your-server-domain>:<port>/api/v1/webhook/slack
+   ```
+5. Under **Subscribe to bot events**, add: `message.channels`, `message.im`
+6. Under **OAuth & Permissions**, add Bot Token Scopes:
+   - `chat:write` — Send messages
+   - `channels:history` — Read channel message history
+   - `im:history` — Read direct message history
+7. Install the app to your workspace and obtain the **Bot Token** (starts with `xoxb-`)
+8. In **Basic Information**, obtain the **Signing Secret**
+
+### 2. Configure in EasyShell
+
+1. Navigate to **System Management → Bot Configuration → Slack**
 2. Fill in the configuration:
 
 | Field | Description | Required |
 |-------|-------------|----------|
-| Webhook URL | DingTalk Webhook URL | Yes |
-| Secret | Signing key (starts with `SEC`) | Recommended |
+| Webhook URL | Slack Incoming Webhook URL (for push messages) | Optional |
+| Bot Token | Bot Token (starts with `xoxb-`, for channel replies) | Recommended |
+| Allowed Channel IDs | Comma-separated list of allowed channel IDs | Optional |
 
 3. Toggle **Enable** on
 
 <Aside type="tip">
-DingTalk uses **Webhook callback** mode — your server needs a publicly accessible HTTPS address. Signature verification uses HmacSHA256. If you only need to push messages to DingTalk groups (no receiving), just configure the Webhook URL.
+Slack receives messages via **Events API**, requiring a publicly accessible HTTPS address. Signature verification uses the Signing Secret to ensure request authenticity. If a Bot Token is configured, the AI replies directly in the channel.
 </Aside>
 
 ---
 
+## WeCom (WeChat Work) Bot
+
+WeCom bot currently supports **push-only** messaging to group chats.
+
+### 1. Create a Group Bot
+
+1. In a WeCom group chat, click Group Settings → **Add Group Bot**
+2. Enter the bot name and create
+3. Copy the generated **Webhook URL**
+
+### 2. Configure in EasyShell
+
+1. Navigate to **System Management → Bot Configuration → WeCom**
+2. Fill in the configuration:
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| Webhook URL | WeCom Webhook URL | Yes |
+
+3. Toggle **Enable** on
+
+<Aside type="note">
+WeCom bot is currently used for **push-only** scenarios (e.g., scheduled inspection notifications, alert pushes) and does not support receiving and replying to user messages.
+</Aside>
+
+---
 
 ## Conversation Context Settings
 
 Bot channels support persistent conversation context, so the AI remembers previous messages within a session. These settings are configured globally for all channels.
 
-Navigate to **System Management → AI Settings → Message Channels**, and find the **Channel Context Settings** panel.
+Navigate to **System Management → Bot Configuration**, and find the **Channel Context Settings** panel.
 
 ### Configuration Options
 
@@ -174,7 +375,7 @@ Each channel can also override the default provider and model individually. Per-
 
 ### Per-Channel Provider & Model
 
-In each channel's configuration section (Telegram, Discord, DingTalk), you can optionally set a **Provider** and **Model** specific to that channel. This allows different channels to use different AI models. If left empty, the global channel defaults above are used.
+In each channel's configuration section, you can optionally set a **Provider** and **Model** specific to that channel. This allows different channels to use different AI models. If left empty, the global channel defaults above are used.
 
 ### Resetting Conversation Context
 
@@ -183,6 +384,14 @@ Users can send the `/new` command in any bot channel to **reset their conversati
 <Aside type="note">
 Session context is stored in server memory. If the server restarts, all active sessions are cleared and conversations start fresh.
 </Aside>
+
+---
+
+## Scheduled Task Channel Push
+
+Scheduled inspection tasks and scheduled script execution results can be pushed to designated bot channels. When creating or editing a scheduled task, select the **Notification Channel** — task results will be automatically sent to the selected channels upon completion.
+
+All enabled channels are supported: Telegram, Discord, DingTalk, Feishu, Slack, and WeCom.
 
 ---
 
@@ -195,26 +404,53 @@ Session context is stored in server memory. If the server restarts, all active s
 3. Verify the Bot Token or Webhook URL is correct
 4. Confirm an AI model provider is configured (e.g., OpenAI, DeepSeek)
 
+### DingTalk / Feishu Stream mode not connecting?
+
+1. Verify the Client ID / App ID and Secret are correct
+2. Confirm the app has Bot capability enabled on the open platform
+3. Check that outbound network from your server can reach `api.dingtalk.com` or `open.feishu.cn`
+4. Check logs for WebSocket connection errors
+5. Stream mode auto-reconnects with exponential backoff — wait a few seconds
+
 ### How to restart Telegram / Discord bot?
 
-In **AI Settings**, turn off the channel's Enable toggle, wait a few seconds, then turn it back on. The system will automatically stop the old connection and establish a new one.
+In **Bot Configuration**, turn off the channel's Enable toggle, wait a few seconds, then turn it back on. The system will automatically stop the old connection and establish a new one.
 
-### DingTalk bot not receiving messages?
+### DingTalk bot not receiving messages (Webhook mode)?
 
 1. Confirm you're using an enterprise internal application bot (not a custom group bot) with a message receiving URL configured
 2. Verify the callback URL `https://<domain>/api/v1/webhook/dingtalk` is publicly accessible
 3. Check that the signing Secret matches the DingTalk Open Platform configuration
 4. Check server logs for signature verification failures
 
+### Feishu bot not receiving messages (Webhook mode)?
+
+1. Verify the callback URL `https://<domain>/api/v1/webhook/feishu` is publicly accessible
+2. Confirm the `url_verification` challenge completed successfully (EasyShell handles this automatically)
+3. Confirm you've subscribed to the `im.message.receive_v1` event
+4. Check that the signing Secret matches the Feishu Open Platform configuration
+
+### Slack bot not receiving messages?
+
+1. Verify the Events API request URL `https://<domain>/api/v1/webhook/slack` is publicly accessible
+2. Confirm you've subscribed to `message.channels` and `message.im` events
+3. Confirm Bot Token Scopes include `chat:write` and `channels:history`
+4. Check that the Signing Secret is correct
+
 ### How to check bot status?
 
 Check the EasyShell server startup logs:
 
 ```
-Started channel: telegram          — Telegram bot started
-Started channel: discord           — Discord bot started
-DingTalk bot started (webhook mode) — DingTalk bot started
-Failed to start channel: xxx       — Startup failed, check error details
+Started channel: telegram                — Telegram bot started
+Started channel: discord                 — Discord bot started
+DingTalk bot started (stream mode)       — DingTalk bot started (Stream)
+DingTalk bot started (webhook mode)      — DingTalk bot started (Webhook)
+Feishu bot started (stream mode)         — Feishu bot started (Stream)
+Feishu bot started (webhook mode)        — Feishu bot started (Webhook)
+Slack bot started (webhook mode)         — Slack bot started
+WeChat Work bot started (webhook mode)   — WeCom bot started
+Failed to start channel: xxx             — Startup failed, check error details
 ```
 
 ### Bot doesn't remember conversation history?
